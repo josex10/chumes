@@ -259,3 +259,63 @@ DRAFT → SENT → CUSTOMER_APPROVED → EVENT_CREATION → CONVERTED
 - WhatsApp integration
 - Email marketing segmentation
 - Invoice generation (Costa Rica compliance)
+
+
+
+
+## REGLAS DE NEGOCIO RN
+
+### RN-01: Conflictos de Inventario
+
+La existencia de conflictos de inventario NO impide la creación de un evento.
+
+Cuando la disponibilidad calculada sea menor que la cantidad requerida, el sistema deberá:
+
+- Permitir la creación del evento.
+- Registrar el conflicto detectado.
+- Marcar el evento como "Con Conflictos de Inventario".
+- Mostrar el conflicto en los paneles de seguimiento operativo.
+
+Los conflictos podrán resolverse mediante:
+
+- Confección de inventario adicional.
+- Alquiler a proveedores externos.
+- Reprogramación logística.
+- Ajustes autorizados por la administración.
+
+### RN-02:  n evento puede originarse a partir de una cotización aprobada o ser creado directamente por un usuario autorizado.
+
+
+## CASOS DE USO CU
+
+
+### CU-002: Convertir Cotización en Evento
+
+#### Flujo Principal
+
+1. El usuario selecciona una cotización aprobada.
+2. El sistema solicita la información final del evento.
+3. El sistema calcula la disponibilidad para las fechas indicadas.
+4. El sistema crea el evento.
+
+#### Flujo Alternativo A1: Conflicto de Inventario
+
+1. El sistema detecta faltantes de inventario.
+2. El sistema muestra el detalle de los conflictos encontrados.
+3. El usuario puede continuar con la creación del evento.
+4. El sistema registra los conflictos asociados al evento.
+5. El evento queda marcado para seguimiento operativo.
+
+
+## Estrategia de Disponibilidad
+
+La disponibilidad es una recomendación operativa y no una restricción absoluta.
+
+El sistema deberá identificar conflictos de inventario y notificarlos oportunamente, pero no bloqueará la creación de eventos.
+
+La responsabilidad de resolver dichos conflictos recae en la operación mediante:
+
+- Confección.
+- Abastecimiento externo.
+- Reprogramación logística.
+- Otras decisiones autorizadas.
