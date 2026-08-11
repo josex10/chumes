@@ -1,36 +1,82 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Chumes Intranet
+
+Internal platform for managing rental and sales operations. Built with Next.js, Clerk (auth), and Supabase (PostgreSQL).
 
 ## Getting Started
 
-First, run the development server:
+### 1. Install dependencies
+
+```bash
+npm install
+```
+
+### 2. Configure environment variables
+
+Copy `.env.example` to `.env.local` and fill in the values:
+
+| Variable | Source |
+|---|---|
+| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | Clerk Dashboard → API Keys |
+| `CLERK_SECRET_KEY` | Clerk Dashboard → API Keys |
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase Dashboard → Settings → API |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Supabase Dashboard → Settings → API (anon/public key) |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase Dashboard → Settings → API (service role key) |
+
+### 3. Connect Clerk and Supabase (one-time setup)
+
+**In Clerk Dashboard:**
+1. Go to **Integrations → Supabase** (or enable Supabase compatibility under API Keys).
+2. Enable the integration for your application.
+
+**In Supabase Dashboard:**
+1. Go to **Authentication → Sign In/Up → Third Party Auth**.
+2. Add **Clerk** as a provider using your Clerk Frontend API URL / Issuer.
+
+### 4. Run the database migration
+
+Open the Supabase SQL Editor and run the contents of:
+
+```
+supabase/migrations/20260311000000_foundation.sql
+```
+
+This creates the `requesting_user_id()` helper function used by Row Level Security policies.
+
+### 5. Start the dev server
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000). Sign in, then visit [http://localhost:3000/debug/supabase](http://localhost:3000/debug/supabase) to verify the Clerk → Supabase connection.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Supabase Client Usage
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Client | File | When to use |
+|---|---|---|
+| Server (RLS) | `lib/supabase/server.ts` | Server Components, Server Actions — user-scoped queries |
+| Browser (RLS) | `lib/supabase/client.ts` | Client Components that query Supabase directly |
+| Admin (no RLS) | `lib/supabase/admin.ts` | Webhooks, cron jobs — bypasses Row Level Security |
 
-## Learn More
+Always prefer the server client for data access. Use the admin client only in trusted server-only code.
 
-To learn more about Next.js, take a look at the following resources:
+## RLS Conventions
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Since auth is handled by Clerk (not Supabase Auth), use `requesting_user_id()` in RLS policies instead of `auth.uid()`:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```sql
+CREATE POLICY "Authenticated users can read"
+  ON some_table FOR SELECT
+  TO authenticated
+  USING (requesting_user_id() IS NOT NULL);
+```
 
-## Deploy on Vercel
+## Generate Types
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+After adding tables, regenerate TypeScript types:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+npm run gen:types
+```
+
+Requires the [Supabase CLI](https://supabase.com/docs/guides/cli) linked to your project.
