@@ -58,6 +58,21 @@ Open **Supabase Dashboard → SQL Editor** and run these files **in order**:
 2. `supabase/migrations/20260311000001_roles_and_profiles.sql`  
    Creates `roles`, `profile_statuses`, and `profiles` tables with seed data.
 
+3. `supabase/migrations/20260311000002_customers.sql`  
+   Creates `customer_types` and `customers` tables with seed data and RLS policies.
+
+Alternatively, if you use the **Supabase CLI** locally:
+
+```bash
+supabase db push
+```
+
+After applying migrations, regenerate TypeScript types (optional if types are already committed):
+
+```bash
+npm run gen:types
+```
+
 ### 4. Connect Clerk and Supabase
 
 Clerk handles authentication; Supabase stores data. They must trust each other's tokens.
@@ -119,7 +134,7 @@ Open [http://localhost:3000](http://localhost:3000).
 ## Auth and profile flow
 
 ```
-/  (public landing — Sign in / Sign up)
+/  (public landing — Sign in / Sign up, or Customers when signed in)
         ↓
 /sign-up or /sign-in
         ↓
@@ -129,18 +144,23 @@ Open [http://localhost:3000](http://localhost:3000).
    ↓         ↓              ↓             ↓
 /account-setup  /pending-approval  /access-denied  /dashboard
 (webhook pending)  (awaiting admin)   (rejected)     (approved)
+                                                      ↓
+                                                 /customers
 ```
 
 | Route | Access | Description |
 |---|---|---|
-| `/` | Public | Landing page with Sign in / Sign up |
+| `/` | Public | Landing page with Sign in / Sign up (or **Customers** when signed in) |
 | `/sign-in` | Public | Clerk sign-in |
 | `/sign-up` | Public | Clerk sign-up |
 | `/auth/callback` | Authenticated | Post-login router |
 | `/account-setup` | Authenticated | Waits for webhook to create profile (loader) |
 | `/pending-approval` | Authenticated | Profile created, awaiting admin approval |
 | `/access-denied` | Authenticated | Profile rejected |
-| `/dashboard` | Approved users only | Main app (requires `APPROVED` status) |
+| `/dashboard` | Approved users only | Main app placeholder (requires `APPROVED` status) |
+| `/customers` | Approved users only | Customer list |
+| `/customers/new` | Approved users only | Create customer form |
+| `/customers/[id]/edit` | Approved users only | Edit customer form |
 | `/debug/supabase` | Authenticated | Smoke test for Clerk → Supabase connection |
 
 ### Sign-up sequence
@@ -197,7 +217,50 @@ WHERE email = 'user@example.com';
 | Clerk ↔ Supabase JWT | Sign in, visit `/debug/supabase` — Clerk and Supabase user IDs should match |
 | Webhook | Clerk → Webhooks → your endpoint → **Attempts** should show `200` |
 | Profile created | Supabase → Table Editor → `profiles` row after signup |
-| Approval gate | Pending user cannot access `/dashboard` |
+| Approval gate | Pending user cannot access `/dashboard` or `/customers` |
+| Customers module | Sign in as approved user → `/customers` → create and edit a customer |
+
+## Customers module
+
+Approved users can manage customers at `/customers`.
+
+**Required fields:** name, phone (8 digits), customer type.
+
+**Optional fields:** identification, email, notes.
+
+**Phone format:** digits only, masked as `XXXX-XXXX` (Costa Rica local format).
+
+**Customer types** (seeded in `customer_types`):
+
+| Code | Name |
+|---|---|
+| `INDIVIDUAL` | Persona física |
+| `COMPANY` | Empresa |
+| `GOVERNMENT` | Gobierno |
+| `EVENT_PLANNER` | Event Planner |
+| `VENUE` | Salón de eventos |
+
+### Key files
+
+| Area | Path |
+|---|---|
+| Migration | `supabase/migrations/20260311000002_customers.sql` |
+| Domain logic | `lib/customers/` |
+| Server Actions | `lib/customers/actions.ts` (`createCustomer`, `updateCustomer`) |
+| Form | `components/customers/customer-form.tsx` |
+| Pages | `app/(authenticated)/customers/` |
+
+## UI components (shadcn/ui)
+
+The project uses [shadcn/ui](https://ui.shadcn.com/) with Tailwind CSS v4. Components live under `components/ui/`.
+
+To add more components later:
+
+```bash
+npx shadcn@latest add <component-name>
+```
+
+Installed components include: `button`, `input`, `label`, `select`, `table`, `card`, `textarea`. Forms use `react-hook-form` + `zod` directly.
 
 ## Project scripts
 
@@ -246,4 +309,6 @@ CREATE POLICY "Authenticated users can read"
 - **Next.js 16** (App Router)
 - **Clerk** — authentication, sessions, webhooks
 - **Supabase** — PostgreSQL, Row Level Security
-- **TypeScript**, **Tailwind CSS**
+- **shadcn/ui** — UI components (Base UI + Tailwind)
+- **react-hook-form** + **zod** — form validation
+- **TypeScript**, **Tailwind CSS v4**

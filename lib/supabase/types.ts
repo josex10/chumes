@@ -42,6 +42,32 @@ export type ProfileWithRelations = Profile & {
   profile_statuses: ProfileStatus;
 };
 
+export type CustomerType = {
+  id: number;
+  code: string;
+  name: string;
+  description: string | null;
+  is_active: boolean;
+  created_at: string;
+};
+
+export type Customer = {
+  id: string;
+  name: string;
+  identification: string | null;
+  customer_type_id: number;
+  email: string | null;
+  phone: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type CustomerWithRelations = Customer & {
+  customer_types: CustomerType;
+};
+
+
 export type Database = {
   public: {
     Tables: {
@@ -92,6 +118,39 @@ export type Database = {
             foreignKeyName: "profiles_status_id_fkey";
             columns: ["status_id"];
             referencedRelation: "profile_statuses";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      customer_types: {
+        Row: CustomerType;
+        Insert: {
+          code: string;
+          name: string;
+          description?: string | null;
+          is_active?: boolean;
+        };
+        Update: Partial<
+          Database["public"]["Tables"]["customer_types"]["Insert"]
+        >;
+        Relationships: [];
+      };
+      customers: {
+        Row: Customer;
+        Insert: {
+          name: string;
+          identification?: string | null;
+          customer_type_id: number;
+          email?: string | null;
+          phone?: string | null;
+          notes?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["customers"]["Insert"]>;
+        Relationships: [
+          {
+            foreignKeyName: "customers_customer_type_id_fkey";
+            columns: ["customer_type_id"];
+            referencedRelation: "customer_types";
             referencedColumns: ["id"];
           },
         ];
