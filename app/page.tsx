@@ -17,15 +17,26 @@ export default async function HomePage() {
         </p>
         <div className="mt-10 flex flex-col gap-4 sm:flex-row sm:justify-center">
           {userId ? (
-            <Link
-              href="/customers"
-              className={cn(
-                buttonVariants(),
-                "inline-flex h-12 items-center justify-center rounded-full px-8 text-sm",
-              )}
-            >
-              Customers
-            </Link>
+            <>
+              <Link
+                href="/customers"
+                className={cn(
+                  buttonVariants(),
+                  "inline-flex h-12 items-center justify-center rounded-full px-8 text-sm",
+                )}
+              >
+                Customers
+              </Link>
+              <Link
+                href="/products"
+                className={cn(
+                  buttonVariants({ variant: "outline" }),
+                  "inline-flex h-12 items-center justify-center rounded-full px-8 text-sm",
+                )}
+              >
+                Products
+              </Link>
+            </>
           ) : (
             <>
               <Link

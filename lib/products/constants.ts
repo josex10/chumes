@@ -1,0 +1,24 @@
+export const PRODUCT_CATEGORY = {
+  TABLE_LINENS: "TABLE_LINENS",
+  CHAIR_COVERS: "CHAIR_COVERS",
+  CHAIRS: "CHAIRS",
+  TABLES: "TABLES",
+  DECORATION: "DECORATION",
+  ACCESSORIES: "ACCESSORIES",
+  OTHER: "OTHER",
+} as const;
+
+export const PRODUCT_TRACKING_TYPE = {
+  QUANTITY: "QUANTITY",
+  ASSET: "ASSET",
+} as const;
+
+export const PRODUCT_TYPE = {
+  SIMPLE: "SIMPLE",
+  BUNDLE: "BUNDLE",
+} as const;
+
+export const PRODUCT_PRICE_TYPE = {
+  RENTAL: "RENTAL",
+  SALE: "SALE",
+} as const;

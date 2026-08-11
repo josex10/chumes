@@ -61,6 +61,12 @@ Open **Supabase Dashboard → SQL Editor** and run these files **in order**:
 3. `supabase/migrations/20260311000002_customers.sql`  
    Creates `customer_types` and `customers` tables with seed data and RLS policies.
 
+4. `supabase/migrations/20260311000003_products.sql`  
+   Creates product catalog tables (categories, types, products, prices, costs, bundles).
+
+5. `supabase/migrations/20260311000004_inventory.sql`  
+   Creates inventory movement types, movements ledger, and `product_stock_balances` view.
+
 Alternatively, if you use the **Supabase CLI** locally:
 
 ```bash
@@ -134,7 +140,7 @@ Open [http://localhost:3000](http://localhost:3000).
 ## Auth and profile flow
 
 ```
-/  (public landing — Sign in / Sign up, or Customers when signed in)
+/  (public landing — Sign in / Sign up, or Customers/Products when signed in)
         ↓
 /sign-up or /sign-in
         ↓
@@ -145,12 +151,12 @@ Open [http://localhost:3000](http://localhost:3000).
 /account-setup  /pending-approval  /access-denied  /dashboard
 (webhook pending)  (awaiting admin)   (rejected)     (approved)
                                                       ↓
-                                                 /customers
+                                            /customers, /products
 ```
 
 | Route | Access | Description |
 |---|---|---|
-| `/` | Public | Landing page with Sign in / Sign up (or **Customers** when signed in) |
+| `/` | Public | Landing page with Sign in / Sign up (or **Customers** / **Products** when signed in) |
 | `/sign-in` | Public | Clerk sign-in |
 | `/sign-up` | Public | Clerk sign-up |
 | `/auth/callback` | Authenticated | Post-login router |
@@ -161,6 +167,10 @@ Open [http://localhost:3000](http://localhost:3000).
 | `/customers` | Approved users only | Customer list |
 | `/customers/new` | Approved users only | Create customer form |
 | `/customers/[id]/edit` | Approved users only | Edit customer form |
+| `/products` | Approved users only | Product list |
+| `/products/new` | Approved users only | Create simple product |
+| `/products/new/bundle` | Approved users only | Create bundle product |
+| `/products/[id]/edit` | Approved users only | Edit product, record inventory movements |
 | `/debug/supabase` | Authenticated | Smoke test for Clerk → Supabase connection |
 
 ### Sign-up sequence
@@ -217,8 +227,9 @@ WHERE email = 'user@example.com';
 | Clerk ↔ Supabase JWT | Sign in, visit `/debug/supabase` — Clerk and Supabase user IDs should match |
 | Webhook | Clerk → Webhooks → your endpoint → **Attempts** should show `200` |
 | Profile created | Supabase → Table Editor → `profiles` row after signup |
-| Approval gate | Pending user cannot access `/dashboard` or `/customers` |
+| Approval gate | Pending user cannot access `/dashboard`, `/customers`, or `/products` |
 | Customers module | Sign in as approved user → `/customers` → create and edit a customer |
+| Products module | Sign in as approved user → `/products` → create a product and record an initial stock movement |
 
 ## Customers module
 
@@ -249,6 +260,49 @@ Approved users can manage customers at `/customers`.
 | Server Actions | `lib/customers/actions.ts` (`createCustomer`, `updateCustomer`) |
 | Form | `components/customers/customer-form.tsx` |
 | Pages | `app/(authenticated)/customers/` |
+
+## Products and inventory module
+
+Approved users can manage the product catalog at `/products`.
+
+**Simple products** are quantity-tracked items with optional rental/sale prices and replacement cost.
+
+**Bundles** are commercial packages made of simple products. Bundles do not hold their own stock; availability is derived from component products.
+
+**Inventory** is movement-based (RN-012). Stock is computed from `inventory_movements`, not edited directly. On a simple product edit page you can record manual movements:
+
+| Code | Effect |
+|---|---|
+| `INITIAL_LOAD` | Increase stock |
+| `PURCHASE` | Increase stock |
+| `ADJUSTMENT` | Increase or decrease stock |
+| `DAMAGE` | Decrease stock |
+| `LOSS` | Decrease stock |
+
+Event-linked movements (`EVENT_OUT`, `EVENT_RETURN`) and reservations will be added with the Events module.
+
+**Product categories** (seeded in `product_categories`):
+
+| Code | Name |
+|---|---|
+| `TABLE_LINENS` | Mantelería |
+| `CHAIR_COVERS` | Forros de silla |
+| `CHAIRS` | Sillas |
+| `TABLES` | Mesas |
+| `DECORATION` | Decoración |
+| `ACCESSORIES` | Accesorios |
+| `OTHER` | Otros |
+
+### Key files
+
+| Area | Path |
+|---|---|
+| Migrations | `supabase/migrations/20260311000003_products.sql`, `20260311000004_inventory.sql` |
+| Product domain | `lib/products/` |
+| Inventory domain | `lib/inventory/` |
+| Server Actions | `lib/products/actions.ts`, `lib/inventory/actions.ts` |
+| Forms | `components/products/product-form.tsx`, `bundle-form.tsx`, `inventory-panel.tsx` |
+| Pages | `app/(authenticated)/products/` |
 
 ## UI components (shadcn/ui)
 
