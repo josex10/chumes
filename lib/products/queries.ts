@@ -9,6 +9,7 @@ import type {
   ProductTrackingType,
   ProductType,
   ProductWithRelations,
+  QuotableProduct,
 } from "@/lib/supabase/types";
 
 export type ProductListItem = ProductWithRelations & {
@@ -283,4 +284,56 @@ export async function getBundleAvailability(
     })),
     stockByProductId,
   );
+}
+
+export async function getQuotableProducts(): Promise<QuotableProduct[]> {
+  const supabase = createAdminSupabaseClient();
+  const { data: products, error } = await supabase
+    .from("products")
+    .select(
+      "*, product_categories(*), product_types(*), product_tracking_types(*)",
+    )
+    .eq("is_active", true)
+    .order("name");
+
+  if (error) {
+    console.error("[getQuotableProducts]", error.message);
+    return [];
+  }
+
+  const productList = (products ?? []) as ProductWithRelations[];
+  if (productList.length === 0) return [];
+
+  const productIds = productList.map((p) => p.id);
+  const { data: prices, error: pricesError } = await supabase
+    .from("product_prices")
+    .select("*, product_price_types(*)")
+    .in("product_id", productIds)
+    .is("effective_to", null);
+
+  if (pricesError) {
+    console.error("[getQuotableProducts prices]", pricesError.message);
+  }
+
+  const pricesByProduct = new Map<string, { rental: number | null; sale: number | null }>();
+  for (const product of productList) {
+    pricesByProduct.set(product.id, { rental: null, sale: null });
+  }
+
+  for (const price of prices ?? []) {
+    const current = pricesByProduct.get(price.product_id) ?? { rental: null, sale: null };
+    const code = price.product_price_types?.code;
+    if (code === "RENTAL") current.rental = Number(price.amount);
+    if (code === "SALE") current.sale = Number(price.amount);
+    pricesByProduct.set(price.product_id, current);
+  }
+
+  return productList.map((product) => {
+    const productPrices = pricesByProduct.get(product.id) ?? { rental: null, sale: null };
+    return {
+      ...product,
+      rental_price: productPrices.rental,
+      sale_price: productPrices.sale,
+    };
+  });
 }

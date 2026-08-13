@@ -194,6 +194,116 @@ export type ProductStockBalance = {
   balance: number;
 };
 
+
+export type QuoteStatus = {
+  id: number;
+  code: string;
+  name: string;
+  description: string | null;
+  is_active: boolean;
+  created_at: string;
+};
+
+export type QuoteLineType = {
+  id: number;
+  code: string;
+  name: string;
+  description: string | null;
+  is_active: boolean;
+  created_at: string;
+};
+
+export type Tax = {
+  id: number;
+  code: string;
+  name: string;
+  rate: number;
+  description: string | null;
+  is_active: boolean;
+  created_at: string;
+};
+
+export type DiscountCode = {
+  id: number;
+  code: string;
+  name: string;
+  discount_type: "PERCENTAGE" | "FIXED";
+  value: number;
+  is_active: boolean;
+  created_at: string;
+};
+
+export type DeliveryZone = {
+  id: number;
+  name: string;
+  suggested_fee: number;
+  is_active: boolean;
+  created_at: string;
+};
+
+export type Quote = {
+  id: string;
+  quote_number: string;
+  customer_id: string;
+  status_id: number;
+  estimated_location: string | null;
+  delivery_zone_id: number | null;
+  delivery_suggested_fee: number | null;
+  delivery_fee: number | null;
+  discount_code_id: number | null;
+  discount_amount: number;
+  subtotal: number;
+  tax_total: number;
+  total: number;
+  notes: string | null;
+  valid_until: string | null;
+  sent_at: string | null;
+  approved_at: string | null;
+  rejected_at: string | null;
+  expired_at: string | null;
+  is_locked: boolean;
+  created_at: string;
+  updated_at: string;
+  created_by: string | null;
+  updated_by: string | null;
+};
+
+export type QuoteItem = {
+  id: string;
+  quote_id: string;
+  product_id: string;
+  line_type_id: number;
+  quantity: number;
+  unit_price: number;
+  tax_id: number | null;
+  tax_rate: number;
+  tax_amount: number;
+  line_subtotal: number;
+  line_total: number;
+  description: string | null;
+  sort_order: number;
+  created_at: string;
+};
+
+export type QuoteItemWithRelations = QuoteItem & {
+  products: Product;
+  quote_line_types: QuoteLineType;
+  taxes: Tax | null;
+};
+
+export type QuoteWithRelations = Quote & {
+  customers: CustomerWithRelations;
+  quote_statuses: QuoteStatus;
+  delivery_zones?: DeliveryZone | null;
+  discount_codes?: DiscountCode | null;
+  quote_items?: QuoteItemWithRelations[];
+};
+
+export type QuotableProduct = ProductWithRelations & {
+  rental_price: number | null;
+  sale_price: number | null;
+};
+
 export type Database = {
   public: {
     Tables: {
@@ -476,6 +586,159 @@ export type Database = {
             foreignKeyName: "inventory_movements_movement_type_id_fkey";
             columns: ["movement_type_id"];
             referencedRelation: "inventory_movement_types";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      quote_statuses: {
+        Row: QuoteStatus;
+        Insert: {
+          code: string;
+          name: string;
+          description?: string | null;
+          is_active?: boolean;
+        };
+        Update: Partial<Database["public"]["Tables"]["quote_statuses"]["Insert"]>;
+        Relationships: [];
+      };
+      quote_line_types: {
+        Row: QuoteLineType;
+        Insert: {
+          code: string;
+          name: string;
+          description?: string | null;
+          is_active?: boolean;
+        };
+        Update: Partial<Database["public"]["Tables"]["quote_line_types"]["Insert"]>;
+        Relationships: [];
+      };
+      taxes: {
+        Row: Tax;
+        Insert: {
+          code: string;
+          name: string;
+          rate?: number;
+          description?: string | null;
+          is_active?: boolean;
+        };
+        Update: Partial<Database["public"]["Tables"]["taxes"]["Insert"]>;
+        Relationships: [];
+      };
+      discount_codes: {
+        Row: DiscountCode;
+        Insert: {
+          code: string;
+          name: string;
+          discount_type: "PERCENTAGE" | "FIXED";
+          value: number;
+          is_active?: boolean;
+        };
+        Update: Partial<Database["public"]["Tables"]["discount_codes"]["Insert"]>;
+        Relationships: [];
+      };
+      delivery_zones: {
+        Row: DeliveryZone;
+        Insert: {
+          name: string;
+          suggested_fee?: number;
+          is_active?: boolean;
+        };
+        Update: Partial<Database["public"]["Tables"]["delivery_zones"]["Insert"]>;
+        Relationships: [];
+      };
+      quotes: {
+        Row: Quote;
+        Insert: {
+          quote_number: string;
+          customer_id: string;
+          status_id: number;
+          estimated_location?: string | null;
+          delivery_zone_id?: number | null;
+          delivery_suggested_fee?: number | null;
+          delivery_fee?: number | null;
+          discount_code_id?: number | null;
+          discount_amount?: number;
+          subtotal?: number;
+          tax_total?: number;
+          total?: number;
+          notes?: string | null;
+          valid_until?: string | null;
+          sent_at?: string | null;
+          approved_at?: string | null;
+          rejected_at?: string | null;
+          expired_at?: string | null;
+          is_locked?: boolean;
+          created_by?: string | null;
+          updated_by?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["quotes"]["Insert"]>;
+        Relationships: [
+          {
+            foreignKeyName: "quotes_customer_id_fkey";
+            columns: ["customer_id"];
+            referencedRelation: "customers";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "quotes_status_id_fkey";
+            columns: ["status_id"];
+            referencedRelation: "quote_statuses";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "quotes_delivery_zone_id_fkey";
+            columns: ["delivery_zone_id"];
+            referencedRelation: "delivery_zones";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "quotes_discount_code_id_fkey";
+            columns: ["discount_code_id"];
+            referencedRelation: "discount_codes";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      quote_items: {
+        Row: QuoteItem;
+        Insert: {
+          quote_id: string;
+          product_id: string;
+          line_type_id: number;
+          quantity: number;
+          unit_price: number;
+          tax_id?: number | null;
+          tax_rate?: number;
+          tax_amount?: number;
+          line_subtotal?: number;
+          line_total?: number;
+          description?: string | null;
+          sort_order?: number;
+        };
+        Update: Partial<Database["public"]["Tables"]["quote_items"]["Insert"]>;
+        Relationships: [
+          {
+            foreignKeyName: "quote_items_quote_id_fkey";
+            columns: ["quote_id"];
+            referencedRelation: "quotes";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "quote_items_product_id_fkey";
+            columns: ["product_id"];
+            referencedRelation: "products";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "quote_items_line_type_id_fkey";
+            columns: ["line_type_id"];
+            referencedRelation: "quote_line_types";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "quote_items_tax_id_fkey";
+            columns: ["tax_id"];
+            referencedRelation: "taxes";
             referencedColumns: ["id"];
           },
         ];

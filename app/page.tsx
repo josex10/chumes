@@ -36,6 +36,15 @@ export default async function HomePage() {
               >
                 Products
               </Link>
+              <Link
+                href="/quotes"
+                className={cn(
+                  buttonVariants({ variant: "outline" }),
+                  "inline-flex h-12 items-center justify-center rounded-full px-8 text-sm",
+                )}
+              >
+                Quotes
+              </Link>
             </>
           ) : (
             <>
