@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { AppShell } from "@/components/layout/app-shell";
 import { getCurrentProfile } from "@/lib/profiles/get-profile";
 import { getProfileStatusCode } from "@/lib/profiles/status";
 import { PROFILE_STATUS } from "@/lib/profiles/constants";
@@ -30,5 +31,9 @@ export default async function AuthenticatedLayout({
     redirect("/account-setup");
   }
 
-  return <>{children}</>;
+  return (
+    <AppShell fullName={profile.full_name} email={profile.email}>
+      {children}
+    </AppShell>
+  );
 }

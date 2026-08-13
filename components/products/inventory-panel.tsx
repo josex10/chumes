@@ -234,7 +234,7 @@ export function InventoryPanel({
               <p className="text-sm text-destructive">{submitError}</p>
             )}
 
-            <Button type="submit" disabled={isPending}>
+            <Button type="submit" variant="commit" disabled={isPending}>
               {isPending ? "Recording..." : "Record movement"}
             </Button>
           </form>

@@ -17,6 +17,12 @@ const buttonVariants = cva(
           "hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:hover:bg-muted/50",
         destructive:
           "bg-destructive/10 text-destructive hover:bg-destructive/20 focus-visible:border-destructive/40 focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:hover:bg-destructive/30 dark:focus-visible:ring-destructive/40",
+        commit:
+          "bg-action-commit text-action-commit-foreground hover:bg-action-commit/90 focus-visible:ring-action-commit/30",
+        export:
+          "border border-action-export/35 bg-background text-action-export hover:bg-action-export-subtle dark:border-action-export/40 dark:bg-action-export-subtle/20 dark:hover:bg-action-export-subtle/40",
+        add:
+          "border border-action-add/35 bg-background text-action-add hover:bg-action-add-subtle dark:border-action-add/40 dark:bg-action-add-subtle/20 dark:hover:bg-action-add-subtle/40",
         link: "text-primary underline-offset-4 hover:underline",
       },
       size: {

@@ -27,7 +27,7 @@ export default async function QuotesPage() {
             Manage commercial proposals for Chumes customers.
           </p>
         </div>
-        <Link href="/quotes/new" className={cn(buttonVariants())}>
+        <Link href="/quotes/new" className={cn(buttonVariants({ variant: "add" }))}>
           New quote
         </Link>
       </div>
@@ -37,7 +37,7 @@ export default async function QuotesPage() {
           <p className="text-muted-foreground">No quotes yet.</p>
           <Link
             href="/quotes/new"
-            className={cn(buttonVariants({ variant: "outline" }), "mt-4 inline-flex")}
+            className={cn(buttonVariants({ variant: "add" }), "mt-4 inline-flex")}
           >
             Create your first quote
           </Link>

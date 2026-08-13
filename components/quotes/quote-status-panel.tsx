@@ -65,7 +65,7 @@ export function QuoteStatusPanel({
                 <Button
                   key={statusCode}
                   type="button"
-                  variant={isConvert ? "default" : "outline"}
+                  variant="commit"
                   disabled={isPending || isConvert}
                   title={isConvert ? "Events module coming soon" : undefined}
                   onClick={() => handleTransition(statusCode)}

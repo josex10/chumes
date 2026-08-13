@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { useForm, Controller } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
 import { createQuote, updateQuote } from "@/lib/quotes/actions";
@@ -13,39 +13,27 @@ import {
   type QuoteFormValues,
 } from "@/lib/quotes/schema";
 import type {
+  CustomerType,
   CustomerWithRelations,
   DeliveryZone,
   DiscountCode,
+  ProductCategory,
   QuotableProduct,
   QuoteLineType,
   QuoteWithRelations,
   Tax,
 } from "@/lib/supabase/types";
+import { QuoteDocumentFooter } from "@/components/quotes/quote-document-footer";
+import { QuoteDocumentHeader } from "@/components/quotes/quote-document-header";
 import { QuoteLineItems } from "@/components/quotes/quote-line-items";
-import { QuoteSummary } from "@/components/quotes/quote-summary";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 
 type QuoteFormProps = {
   customers: CustomerWithRelations[];
+  customerTypes: CustomerType[];
   products: QuotableProduct[];
+  categories: ProductCategory[];
   lineTypes: QuoteLineType[];
   taxes: Tax[];
   deliveryZones: DeliveryZone[];
@@ -102,8 +90,10 @@ function buildInitialValues(
 }
 
 export function QuoteForm({
-  customers,
-  products,
+  customers: initialCustomers,
+  customerTypes,
+  products: initialProducts,
+  categories,
   lineTypes,
   taxes,
   deliveryZones,
@@ -114,21 +104,14 @@ export function QuoteForm({
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [customers, setCustomers] = useState(initialCustomers);
+  const [products, setProducts] = useState(initialProducts);
   const isEditing = Boolean(quote);
   const isLocked = quote?.is_locked ?? false;
 
-  const customerItems = useMemo(
-    () =>
-      customers.map((customer) => ({
-        value: customer.id,
-        label: customer.name,
-      })),
-    [customers],
-  );
-
   const deliveryZoneItems = useMemo(
     () => [
-      { value: "none", label: "No zone" },
+      { value: "none", label: "Sin zona" },
       ...deliveryZones.map((zone) => ({
         value: String(zone.id),
         label: zone.name,
@@ -193,6 +176,21 @@ export function QuoteForm({
     }
   }
 
+  function handleCustomerCreated(customer: CustomerWithRelations) {
+    setCustomers((current) => {
+      if (current.some((entry) => entry.id === customer.id)) return current;
+      return [...current, customer].sort((a, b) => a.name.localeCompare(b.name));
+    });
+    setValue("customer_id", customer.id);
+  }
+
+  function handleProductCreated(product: QuotableProduct) {
+    setProducts((current) => {
+      if (current.some((entry) => entry.id === product.id)) return current;
+      return [...current, product].sort((a, b) => a.name.localeCompare(b.name));
+    });
+  }
+
   function onSubmit(values: QuoteFormValues) {
     setSubmitError(null);
 
@@ -212,183 +210,77 @@ export function QuoteForm({
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>{isEditing ? "Edit quote" : "New quote"}</CardTitle>
-          <CardDescription>
-            {isEditing
-              ? `Quote ${quote?.quote_number ?? ""}`
-              : "Create a commercial proposal for a customer."}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="customer_id">Customer</Label>
-              <Controller
-                control={control}
-                name="customer_id"
-                render={({ field }) => (
-                  <Select
-                    value={field.value || undefined}
-                    onValueChange={field.onChange}
-                    disabled={isLocked}
-                    items={customerItems}
-                  >
-                    <SelectTrigger id="customer_id" className="w-full">
-                      <SelectValue placeholder="Select customer" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {customers.map((customer) => (
-                        <SelectItem key={customer.id} value={customer.id}>
-                          {customer.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-              />
-              {errors.customer_id && (
-                <p className="text-sm text-destructive">
-                  {errors.customer_id.message}
-                </p>
-              )}
-            </div>
+    <form
+      onSubmit={handleSubmit(onSubmit)}
+      className="rounded-xl bg-card ring-1 ring-border/60"
+    >
+      <div className="space-y-8 p-6 md:p-8">
+        <QuoteDocumentHeader
+          control={control}
+          register={register}
+          errors={errors}
+          customers={customers}
+          customerTypes={customerTypes}
+          onCustomerCreated={handleCustomerCreated}
+          isEditing={isEditing}
+          quoteNumber={quote?.quote_number}
+          disabled={isLocked}
+        />
 
-            <div className="space-y-2">
-              <Label htmlFor="valid_until">Valid until</Label>
-              <Input
-                id="valid_until"
-                type="date"
-                disabled={isLocked}
-                {...register("valid_until")}
-              />
-            </div>
+        <QuoteLineItems
+          control={control}
+          register={register}
+          setValue={setValue}
+          watch={watch}
+          errors={errors}
+          products={products}
+          categories={categories}
+          lineTypes={lineTypes}
+          taxes={taxes}
+          defaultTaxId={defaultTaxId}
+          disabled={isLocked}
+          onProductCreated={handleProductCreated}
+        />
 
-            <div className="space-y-2 md:col-span-2">
-              <Label htmlFor="estimated_location">Estimated location</Label>
-              <Input
-                id="estimated_location"
-                placeholder="Optional"
-                disabled={isLocked}
-                {...register("estimated_location")}
-              />
-            </div>
+        <QuoteDocumentFooter
+          control={control}
+          register={register}
+          deliveryZones={deliveryZones}
+          deliveryZoneItems={deliveryZoneItems}
+          onZoneChange={handleZoneChange}
+          subtotal={summary.subtotal}
+          taxTotal={summary.tax_total}
+          discountAmount={summary.discount_amount}
+          deliveryFee={summary.delivery_fee}
+          total={summary.total}
+          disabled={isLocked}
+        />
 
-            <div className="space-y-2">
-              <Label htmlFor="delivery_zone_id">Delivery zone</Label>
-              <Controller
-                control={control}
-                name="delivery_zone_id"
-                render={({ field }) => (
-                  <Select
-                    value={field.value ? String(field.value) : "none"}
-                    onValueChange={(value) =>
-                      handleZoneChange(value === "none" ? null : Number(value))
-                    }
-                    disabled={isLocked}
-                    items={deliveryZoneItems}
-                  >
-                    <SelectTrigger id="delivery_zone_id" className="w-full">
-                      <SelectValue placeholder="Select zone" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">No zone</SelectItem>
-                      {deliveryZones.map((zone) => (
-                        <SelectItem key={zone.id} value={String(zone.id)}>
-                          {zone.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="delivery_fee">Delivery fee</Label>
-              <Input
-                id="delivery_fee"
-                type="number"
-                min="0"
-                step="0.01"
-                disabled={isLocked}
-                {...register("delivery_fee", { valueAsNumber: true })}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="discount_code">Discount code</Label>
-              <Input
-                id="discount_code"
-                placeholder="e.g. SALON10"
-                disabled={isLocked}
-                {...register("discount_code")}
-              />
-            </div>
-
-            <div className="space-y-2 md:col-span-2">
-              <Label htmlFor="notes">Notes</Label>
-              <Textarea
-                id="notes"
-                rows={3}
-                disabled={isLocked}
-                {...register("notes")}
-              />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardContent className="pt-6">
-          <QuoteLineItems
-            control={control}
-            register={register}
-            setValue={setValue}
-            watch={watch}
-            errors={errors}
-            products={products}
-            lineTypes={lineTypes}
-            taxes={taxes}
-            defaultTaxId={defaultTaxId}
-            disabled={isLocked}
-          />
-        </CardContent>
-      </Card>
-
-      <QuoteSummary
-        subtotal={summary.subtotal}
-        taxTotal={summary.tax_total}
-        discountAmount={summary.discount_amount}
-        deliveryFee={summary.delivery_fee}
-        total={summary.total}
-      />
-
-      {submitError && (
-        <p className="text-sm text-destructive">{submitError}</p>
-      )}
-
-      {isLocked && (
-        <p className="text-sm text-muted-foreground">
-          This quote is locked because it was approved. Line items and pricing
-          can no longer be edited.
-        </p>
-      )}
-
-      <div className="flex items-center gap-3">
-        {!isLocked && (
-          <Button type="submit" disabled={isPending}>
-            {isPending ? "Saving..." : isEditing ? "Save changes" : "Create quote"}
-          </Button>
+        {submitError && (
+          <p className="text-sm text-destructive">{submitError}</p>
         )}
-        <Link
-          href="/quotes"
-          className={cn(buttonVariants({ variant: "outline" }))}
-        >
-          Cancel
-        </Link>
+
+        {isLocked && (
+          <p className="text-sm text-muted-foreground">
+            Esta cotización está bloqueada porque fue aprobada. Ya no se pueden
+            editar líneas ni precios.
+          </p>
+        )}
+
+        <div className="flex items-center gap-3 border-t border-border/60 pt-6">
+          {!isLocked && (
+            <Button type="submit" variant="commit" disabled={isPending}>
+              {isPending
+                ? "Guardando..."
+                : isEditing
+                  ? "Guardar cotización"
+                  : "Crear cotización"}
+            </Button>
+          )}
+          <Link href="/quotes" className={cn(buttonVariants({ variant: "outline" }))}>
+            Cancelar
+          </Link>
+        </div>
       </div>
     </form>
   );

@@ -2,7 +2,7 @@ import { z } from "zod";
 import { QUOTE_LINE_TYPE } from "@/lib/quotes/constants";
 
 export const quoteLineItemSchema = z.object({
-  product_id: z.string().uuid("Select a product"),
+  product_id: z.string().uuid("Seleccione un producto"),
   line_type_id: z.coerce.number().int().positive("Line type is required"),
   quantity: z.coerce.number().positive("Quantity must be greater than zero"),
   unit_price: z.coerce.number().nonnegative("Unit price must be zero or greater"),

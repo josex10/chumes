@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
-import { getCustomers } from "@/lib/customers/queries";
-import { getQuotableProducts } from "@/lib/products/queries";
+import { getCustomers, getCustomerTypes } from "@/lib/customers/queries";
+import { getProductCategories, getQuotableProducts } from "@/lib/products/queries";
 import {
   getDefaultTax,
   getDeliveryZones,
@@ -11,7 +11,6 @@ import {
 } from "@/lib/quotes/queries";
 import { QuoteDownloadButton } from "@/components/quotes/quote-download-button";
 import { QuoteForm } from "@/components/quotes/quote-form";
-import { QuoteStatusPanel } from "@/components/quotes/quote-status-panel";
 
 export const dynamic = "force-dynamic";
 
@@ -25,7 +24,9 @@ export default async function EditQuotePage({
   const [
     quote,
     customers,
+    customerTypes,
     products,
+    categories,
     lineTypes,
     taxes,
     deliveryZones,
@@ -34,7 +35,9 @@ export default async function EditQuotePage({
   ] = await Promise.all([
     getQuoteById(id),
     getCustomers(),
+    getCustomerTypes(),
     getQuotableProducts(),
+    getProductCategories(),
     getQuoteLineTypes(),
     getTaxes(),
     getDeliveryZones(),
@@ -47,35 +50,22 @@ export default async function EditQuotePage({
   }
 
   return (
-    <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-8 px-6 py-10">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-3xl font-semibold tracking-tight">
-            {quote.quote_number}
-          </h1>
-          <p className="mt-2 text-muted-foreground">
-            {quote.customers.name} · {quote.quote_statuses.name}
-          </p>
-        </div>
+    <main className="mx-auto flex w-full max-w-[1400px] flex-1 flex-col gap-6 px-6 py-8">
+      <div className="flex justify-end">
         <QuoteDownloadButton quoteId={quote.id} />
       </div>
-
-      <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_280px]">
-        <QuoteForm
-          customers={customers}
-          products={products}
-          lineTypes={lineTypes}
-          taxes={taxes}
-          deliveryZones={deliveryZones}
-          discountCodes={discountCodes}
-          defaultTaxId={defaultTax?.id}
-          quote={quote}
-        />
-        <QuoteStatusPanel
-          quoteId={quote.id}
-          currentStatus={quote.quote_statuses}
-        />
-      </div>
+      <QuoteForm
+        customers={customers}
+        customerTypes={customerTypes}
+        products={products}
+        categories={categories}
+        lineTypes={lineTypes}
+        taxes={taxes}
+        deliveryZones={deliveryZones}
+        discountCodes={discountCodes}
+        defaultTaxId={defaultTax?.id}
+        quote={quote}
+      />
     </main>
   );
 }

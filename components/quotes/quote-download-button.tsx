@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 type QuoteDownloadButtonProps = {
   quoteId: string;
   label?: string;
-  variant?: "default" | "outline" | "ghost";
+  variant?: "export" | "outline" | "ghost";
   size?: "default" | "sm";
   className?: string;
 };
@@ -13,7 +13,7 @@ type QuoteDownloadButtonProps = {
 export function QuoteDownloadButton({
   quoteId,
   label = "Descargar PDF",
-  variant = "outline",
+  variant = "export",
   size = "default",
   className,
 }: QuoteDownloadButtonProps) {

@@ -1,5 +1,5 @@
-import { getCustomers } from "@/lib/customers/queries";
-import { getQuotableProducts } from "@/lib/products/queries";
+import { getCustomers, getCustomerTypes } from "@/lib/customers/queries";
+import { getProductCategories, getQuotableProducts } from "@/lib/products/queries";
 import {
   getDefaultTax,
   getDeliveryZones,
@@ -14,7 +14,9 @@ export const dynamic = "force-dynamic";
 export default async function NewQuotePage() {
   const [
     customers,
+    customerTypes,
     products,
+    categories,
     lineTypes,
     taxes,
     deliveryZones,
@@ -22,7 +24,9 @@ export default async function NewQuotePage() {
     defaultTax,
   ] = await Promise.all([
     getCustomers(),
+    getCustomerTypes(),
     getQuotableProducts(),
+    getProductCategories(),
     getQuoteLineTypes(),
     getTaxes(),
     getDeliveryZones(),
@@ -31,10 +35,12 @@ export default async function NewQuotePage() {
   ]);
 
   return (
-    <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-8 px-6 py-10">
+    <main className="mx-auto flex w-full max-w-[1400px] flex-1 flex-col px-6 py-8">
       <QuoteForm
         customers={customers}
+        customerTypes={customerTypes}
         products={products}
+        categories={categories}
         lineTypes={lineTypes}
         taxes={taxes}
         deliveryZones={deliveryZones}

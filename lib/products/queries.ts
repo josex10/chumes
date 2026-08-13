@@ -337,3 +337,48 @@ export async function getQuotableProducts(): Promise<QuotableProduct[]> {
     };
   });
 }
+
+
+export async function getQuotableProductById(
+  id: string,
+): Promise<QuotableProduct | null> {
+  const supabase = createAdminSupabaseClient();
+  const { data: product, error } = await supabase
+    .from("products")
+    .select(
+      "*, product_categories(*), product_types(*), product_tracking_types(*)",
+    )
+    .eq("id", id)
+    .eq("is_active", true)
+    .maybeSingle();
+
+  if (error || !product) {
+    console.error("[getQuotableProductById]", error?.message);
+    return null;
+  }
+
+  const { data: prices, error: pricesError } = await supabase
+    .from("product_prices")
+    .select("*, product_price_types(*)")
+    .eq("product_id", id)
+    .is("effective_to", null);
+
+  if (pricesError) {
+    console.error("[getQuotableProductById prices]", pricesError.message);
+  }
+
+  let rentalPrice: number | null = null;
+  let salePrice: number | null = null;
+
+  for (const price of prices ?? []) {
+    const code = price.product_price_types?.code;
+    if (code === "RENTAL") rentalPrice = Number(price.amount);
+    if (code === "SALE") salePrice = Number(price.amount);
+  }
+
+  return {
+    ...(product as ProductWithRelations),
+    rental_price: rentalPrice,
+    sale_price: salePrice,
+  };
+}

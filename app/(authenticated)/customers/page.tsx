@@ -25,7 +25,7 @@ export default async function CustomersPage() {
             Manage customer records for Chumes operations.
           </p>
         </div>
-        <Link href="/customers/new" className={cn(buttonVariants())}>
+        <Link href="/customers/new" className={cn(buttonVariants({ variant: "add" }))}>
           New customer
         </Link>
       </div>
@@ -35,7 +35,7 @@ export default async function CustomersPage() {
           <p className="text-muted-foreground">No customers yet.</p>
           <Link
             href="/customers/new"
-            className={cn(buttonVariants({ variant: "outline" }), "mt-4 inline-flex")}
+            className={cn(buttonVariants({ variant: "add" }), "mt-4 inline-flex")}
           >
             Add your first customer
           </Link>

@@ -35,6 +35,12 @@
   --color-secondary: var(--secondary);
   --color-primary-foreground: var(--primary-foreground);
   --color-primary: var(--primary);
+  --color-action-commit: var(--action-commit);
+  --color-action-commit-foreground: var(--action-commit-foreground);
+  --color-action-export: var(--action-export);
+  --color-action-export-subtle: var(--action-export-subtle);
+  --color-action-add: var(--action-add);
+  --color-action-add-subtle: var(--action-add-subtle);
   --color-popover-foreground: var(--popover-foreground);
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
@@ -64,6 +70,12 @@
   --accent: oklch(0.97 0 0);
   --accent-foreground: oklch(0.205 0 0);
   --destructive: oklch(0.577 0.245 27.325);
+  --action-commit: oklch(0.32 0.03 250);
+  --action-commit-foreground: oklch(0.98 0 0);
+  --action-export: oklch(0.4 0.06 245);
+  --action-export-subtle: oklch(0.96 0.02 245);
+  --action-add: oklch(0.42 0.06 145);
+  --action-add-subtle: oklch(0.96 0.02 145);
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
   --ring: oklch(0.708 0 0);
@@ -99,6 +111,12 @@
   --accent: oklch(0.269 0 0);
   --accent-foreground: oklch(0.985 0 0);
   --destructive: oklch(0.704 0.191 22.216);
+  --action-commit: oklch(0.78 0.03 250);
+  --action-commit-foreground: oklch(0.18 0 0);
+  --action-export: oklch(0.72 0.05 245);
+  --action-export-subtle: oklch(0.25 0.03 245);
+  --action-add: oklch(0.72 0.05 145);
+  --action-add-subtle: oklch(0.25 0.03 145);
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
   --ring: oklch(0.556 0 0);

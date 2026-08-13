@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
+import { getCustomerById } from "@/lib/customers/queries";
 import {
   customerFormSchema,
   toCustomerPayload,
@@ -9,7 +10,7 @@ import {
 } from "@/lib/customers/schema";
 
 type ActionResult =
-  | { success: true }
+  | { success: true; customerId?: string; customer?: import("@/lib/supabase/types").CustomerWithRelations }
   | { success: false; error: string };
 
 type ParseResult =
@@ -39,15 +40,19 @@ export async function createCustomer(
   }
 
   const supabase = createAdminSupabaseClient();
-  const { error } = await supabase.from("customers").insert(parsed.data);
+  const { data, error } = await supabase
+    .from("customers")
+    .insert(parsed.data)
+    .select("id")
+    .single();
 
-  if (error) {
-    console.error("[createCustomer]", error.message);
+  if (error || !data) {
+    console.error("[createCustomer]", error?.message);
     return { success: false, error: "Could not create customer." };
   }
 
   revalidatePath("/customers");
-  return { success: true };
+  return { success: true, customerId: data.id };
 }
 
 export async function updateCustomer(
@@ -74,4 +79,21 @@ export async function updateCustomer(
   revalidatePath("/customers");
   revalidatePath(`/customers/${id}/edit`);
   return { success: true };
+}
+
+
+export async function createCustomerAndFetch(
+  values: CustomerFormValues,
+): Promise<ActionResult> {
+  const result = await createCustomer(values);
+  if (!result.success || !result.customerId) {
+    return result;
+  }
+
+  const customer = await getCustomerById(result.customerId);
+  if (!customer) {
+    return { success: false, error: "Customer created but could not be loaded." };
+  }
+
+  return { success: true, customerId: result.customerId, customer };
 }

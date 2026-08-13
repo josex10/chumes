@@ -9,6 +9,7 @@ import {
   PRODUCT_TYPE,
 } from "@/lib/products/constants";
 import { generateNextProductNumber } from "@/lib/products/product-number";
+import { getQuotableProductById } from "@/lib/products/queries";
 import {
   bundleFormSchema,
   productFormSchema,
@@ -19,7 +20,7 @@ import {
 } from "@/lib/products/schema";
 
 type ActionResult =
-  | { success: true; productId?: string }
+  | { success: true; productId?: string; product?: import("@/lib/supabase/types").QuotableProduct }
   | { success: false; error: string };
 
 async function getLookupIds() {
@@ -288,6 +289,22 @@ export async function createProduct(
     console.error("[createProduct]", error);
     return { success: false, error: "Could not create product." };
   }
+}
+
+export async function createProductAndFetch(
+  values: ProductFormValues,
+): Promise<ActionResult> {
+  const result = await createProduct(values);
+  if (!result.success || !result.productId) {
+    return result;
+  }
+
+  const product = await getQuotableProductById(result.productId);
+  if (!product) {
+    return { success: false, error: "Product created but could not be loaded." };
+  }
+
+  return { success: true, productId: result.productId, product };
 }
 
 export async function updateProduct(

@@ -37,11 +37,11 @@ export default async function ProductsPage() {
         <div className="flex flex-col gap-2 sm:flex-row">
           <Link
             href="/products/new/bundle"
-            className={cn(buttonVariants({ variant: "outline" }))}
+            className={cn(buttonVariants({ variant: "add" }))}
           >
             New bundle
           </Link>
-          <Link href="/products/new" className={cn(buttonVariants())}>
+          <Link href="/products/new" className={cn(buttonVariants({ variant: "add" }))}>
             New product
           </Link>
         </div>
@@ -53,7 +53,7 @@ export default async function ProductsPage() {
           <Link
             href="/products/new"
             className={cn(
-              buttonVariants({ variant: "outline" }),
+              buttonVariants({ variant: "add" }),
               "mt-4 inline-flex",
             )}
           >

@@ -226,7 +226,7 @@ export function BundleForm({
               <Label>Components</Label>
               <Button
                 type="button"
-                variant="outline"
+                variant="add"
                 size="sm"
                 onClick={() =>
                   append({ component_product_id: "", quantity: 1 })
@@ -336,7 +336,7 @@ export function BundleForm({
             >
               Cancel
             </Link>
-            <Button type="submit" disabled={isPending}>
+            <Button type="submit" variant="commit" disabled={isPending}>
               {isPending
                 ? "Saving..."
                 : isEditing

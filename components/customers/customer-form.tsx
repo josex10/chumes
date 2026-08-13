@@ -196,7 +196,7 @@ export function CustomerForm({ customerTypes, customer }: CustomerFormProps) {
             >
               Cancel
             </Link>
-            <Button type="submit" disabled={isPending}>
+            <Button type="submit" variant="commit" disabled={isPending}>
               {isPending
                 ? "Saving..."
                 : isEditing
