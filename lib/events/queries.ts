@@ -1,7 +1,8 @@
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import { EVENT_STATUS } from "@/lib/events/constants";
-import type { EventReservationPdfData } from "@/lib/events/pdf/types";
 import { getQuoteById } from "@/lib/quotes/queries";
+import { attachPaymentSummariesToEvents, getEventPaymentData } from "@/lib/payments/queries";
+import type { EventReservationPdfData } from "@/lib/events/pdf/types";
 import type {
   EventStatus,
   EventWithRelations,
@@ -47,6 +48,24 @@ async function attachQuotesToEvents(
   }));
 }
 
+async function attachPaymentSummaries(
+  events: EventWithRelations[],
+): Promise<EventWithRelations[]> {
+  if (events.length === 0) return events;
+
+  const summaries = await attachPaymentSummariesToEvents(events);
+
+  return events.map((event) => ({
+    ...event,
+    payment_summary: summaries.get(event.id) ?? null,
+  }));
+}
+
+async function enrichEvents(events: EventWithRelations[]): Promise<EventWithRelations[]> {
+  const withQuotes = await attachQuotesToEvents(events);
+  return attachPaymentSummaries(withQuotes);
+}
+
 export async function getEventStatuses(): Promise<EventStatus[]> {
   const supabase = createAdminSupabaseClient();
   const { data, error } = await supabase
@@ -87,7 +106,7 @@ export async function getEvents(
     return [];
   }
 
-  return attachQuotesToEvents((data ?? []) as EventWithRelations[]);
+  return enrichEvents((data ?? []) as EventWithRelations[]);
 }
 
 export async function getEventsByCustomerId(
@@ -120,7 +139,7 @@ export async function getEventsByPhase(
     return [];
   }
 
-  return attachQuotesToEvents((data ?? []) as EventWithRelations[]);
+  return enrichEvents((data ?? []) as EventWithRelations[]);
 }
 
 export async function getEventById(id: string): Promise<EventWithRelations | null> {
@@ -138,7 +157,7 @@ export async function getEventById(id: string): Promise<EventWithRelations | nul
 
   if (!data) return null;
 
-  const [event] = await attachQuotesToEvents([data as EventWithRelations]);
+  const [event] = await enrichEvents([data as EventWithRelations]);
   const { data: linkedQuote } = await supabase
     .from("quotes")
     .select("*, quote_statuses(*), quote_items(*, products(*))")
@@ -177,7 +196,7 @@ export async function getLinkableEventsForCustomer(
     return [];
   }
 
-  const eventsWithQuotes = await attachQuotesToEvents(
+  const eventsWithQuotes = await enrichEvents(
     (events ?? []) as EventWithRelations[],
   );
 
@@ -229,5 +248,23 @@ export async function getEventReservationPdfData(
   const quote = await getQuoteById(linkedQuote.id);
   if (!quote?.quote_items?.length) return null;
 
-  return { event, quote };
+  const { movements, summary } = await getEventPaymentData(eventId);
+  if (!summary) {
+    return {
+      event,
+      quote,
+      paymentSummary: {
+        quoteTotal: Number(quote.total),
+        totalAdvances: 0,
+        totalRefunds: 0,
+        netPaid: 0,
+        balanceDue: Number(quote.total),
+        overpaidAmount: 0,
+        paymentStatus: "PENDING",
+      },
+      movements,
+    };
+  }
+
+  return { event, quote, paymentSummary: summary, movements };
 }

@@ -3,7 +3,9 @@
 import Link from "next/link";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { Circle } from "lucide-react";
 import { getEventBadges, getLinkedQuote } from "@/lib/events/event-badges";
+import { PAYMENT_STATUS, PAYMENT_STATUS_LABELS } from "@/lib/payments/constants";
 import { formatCurrency } from "@/lib/quotes/format";
 import type { EventWithRelations } from "@/lib/supabase/types";
 import { cn } from "@/lib/utils";
@@ -11,6 +13,7 @@ import { cn } from "@/lib/utils";
 type EventKanbanCardProps = {
   event: EventWithRelations;
   isDragOverlay?: boolean;
+  showInvoiceStatus?: boolean;
 };
 
 const badgeStyles = {
@@ -19,7 +22,57 @@ const badgeStyles = {
   info: "bg-sky-500/10 text-sky-700 dark:text-sky-300",
 };
 
-export function EventKanbanCard({ event, isDragOverlay }: EventKanbanCardProps) {
+function EventInvoiceStatus({ event }: { event: EventWithRelations }) {
+  const linkedQuote = getLinkedQuote(event);
+  if (!linkedQuote) return null;
+
+  const summary =
+    event.payment_summary ??
+    ({
+      balanceDue: Number(linkedQuote.total),
+      paymentStatus: PAYMENT_STATUS.PENDING,
+    } as const);
+
+  const isPaid = summary.paymentStatus === PAYMENT_STATUS.PAID;
+  const statusLabel = PAYMENT_STATUS_LABELS[summary.paymentStatus];
+
+  return (
+    <div className="mt-3 space-y-1 border-t border-border/60 pt-3">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-1.5">
+          <Circle
+            className={cn(
+              "size-2 fill-current",
+              isPaid ? "text-emerald-500" : "text-amber-500",
+            )}
+          />
+          <span className="text-[11px] text-muted-foreground">Factura:</span>
+          <span
+            className={cn(
+              "rounded-full px-2 py-0.5 text-[11px] font-medium",
+              isPaid
+                ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+                : "bg-amber-500/10 text-amber-700 dark:text-amber-300",
+            )}
+          >
+            {statusLabel}
+          </span>
+        </div>
+      </div>
+      {!isPaid && summary.balanceDue > 0 ? (
+        <p className="text-[11px] text-muted-foreground/80">
+          Por cancelar {formatCurrency(summary.balanceDue)}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+export function EventKanbanCard({
+  event,
+  isDragOverlay,
+  showInvoiceStatus = false,
+}: EventKanbanCardProps) {
   const {
     attributes,
     listeners,
@@ -99,6 +152,8 @@ export function EventKanbanCard({ event, isDragOverlay }: EventKanbanCardProps) 
           ))}
         </div>
       )}
+
+      {showInvoiceStatus ? <EventInvoiceStatus event={event} /> : null}
     </div>
   );
 }

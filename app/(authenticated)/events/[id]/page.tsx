@@ -2,9 +2,11 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getEventById, getEventStatuses } from "@/lib/events/queries";
 import { getLinkableQuotesForCustomer } from "@/lib/quotes/queries";
+import { getEventPaymentData } from "@/lib/payments/queries";
 import { getStatusPhase } from "@/lib/events/status-transitions";
 import { EVENT_PHASE, EVENT_STATUS } from "@/lib/events/constants";
 import { EventQuotePanel } from "@/components/events/event-quote-panel";
+import { EventPaymentsPanel } from "@/components/events/event-payments-panel";
 import { EventScheduleCard } from "@/components/events/event-schedule-card";
 import { EventStatusActions } from "@/components/events/event-status-actions";
 import { buttonVariants } from "@/components/ui/button";
@@ -63,9 +65,12 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
 
   const phase = getStatusPhase(event.event_statuses.code);
   const isCommercial = phase === EVENT_PHASE.COMMERCIAL;
-  const linkableQuotes = isCommercial
-    ? await getLinkableQuotesForCustomer(event.customer_id)
-    : [];
+  const [linkableQuotes, paymentData] = await Promise.all([
+    isCommercial
+      ? getLinkableQuotesForCustomer(event.customer_id)
+      : Promise.resolve([]),
+    getEventPaymentData(id),
+  ]);
   const phone = getCustomerPhone(event);
   const selectableStatuses = getSelectableStatuses(phase, allStatuses);
 
@@ -159,6 +164,17 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
             isOperational={phase === EVENT_PHASE.OPERATIONAL}
             linkableQuotes={linkableQuotes}
           />
+
+          {paymentData.summary ? (
+            <EventPaymentsPanel
+              eventId={event.id}
+              eventPhase={event.event_statuses.phase}
+              eventStatusCode={event.event_statuses.code}
+              summary={paymentData.summary}
+              movements={paymentData.movements}
+              paymentMethods={paymentData.paymentMethods}
+            />
+          ) : null}
         </div>
 
         <EventStatusActions event={event} selectableStatuses={selectableStatuses} />

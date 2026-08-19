@@ -169,7 +169,13 @@ export function EventsKanbanBoard({
 
         <DragOverlay>
           {activeEvent ? (
-            <EventKanbanCard event={activeEvent} isDragOverlay />
+            <EventKanbanCard
+              event={activeEvent}
+              isDragOverlay
+              showInvoiceStatus={
+                activeEvent.event_statuses.phase === "OPERATIONAL"
+              }
+            />
           ) : null}
         </DragOverlay>
       </DndContext>

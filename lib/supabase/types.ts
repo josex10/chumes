@@ -345,6 +345,48 @@ export type EventSource = {
   updated_at: string;
 };
 
+export type PaymentMethod = {
+  id: number;
+  code: string;
+  name: string;
+  is_active: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type FinancialMovementType = "ADVANCE" | "REFUND";
+
+export type EventFinancialMovement = {
+  id: string;
+  event_id: string;
+  movement_type: FinancialMovementType;
+  amount: number;
+  payment_method_id: number;
+  movement_date: string;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+  created_by: string | null;
+  updated_by: string | null;
+};
+
+export type EventFinancialMovementWithRelations = EventFinancialMovement & {
+  payment_methods: PaymentMethod;
+};
+
+export type PaymentStatus = "PAID" | "PENDING";
+
+export type PaymentSummary = {
+  quoteTotal: number;
+  totalAdvances: number;
+  totalRefunds: number;
+  netPaid: number;
+  balanceDue: number;
+  overpaidAmount: number;
+  paymentStatus: PaymentStatus;
+};
+
 export type Event = {
   id: string;
   title: string;
@@ -377,6 +419,7 @@ export type EventWithRelations = Event & {
   event_statuses: EventStatus;
   event_sources: EventSource;
   quotes?: (Quote & { quote_statuses?: QuoteStatus; quote_items?: { id: string }[] })[];
+  payment_summary?: PaymentSummary | null;
 };
 
 export type Database = {
@@ -860,6 +903,47 @@ export type Database = {
         };
         Update: Partial<Database["public"]["Tables"]["event_sources"]["Insert"]>;
         Relationships: [];
+      };
+      payment_methods: {
+        Row: PaymentMethod;
+        Insert: {
+          code: string;
+          name: string;
+          is_active?: boolean;
+          sort_order?: number;
+        };
+        Update: Partial<Database["public"]["Tables"]["payment_methods"]["Insert"]>;
+        Relationships: [];
+      };
+      event_financial_movements: {
+        Row: EventFinancialMovement;
+        Insert: {
+          event_id: string;
+          movement_type: FinancialMovementType;
+          amount: number;
+          payment_method_id: number;
+          movement_date?: string;
+          notes?: string | null;
+          created_by?: string | null;
+          updated_by?: string | null;
+        };
+        Update: Partial<
+          Database["public"]["Tables"]["event_financial_movements"]["Insert"]
+        >;
+        Relationships: [
+          {
+            foreignKeyName: "event_financial_movements_event_id_fkey";
+            columns: ["event_id"];
+            referencedRelation: "events";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "event_financial_movements_payment_method_id_fkey";
+            columns: ["payment_method_id"];
+            referencedRelation: "payment_methods";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       customer_contacts: {
         Row: CustomerContact;

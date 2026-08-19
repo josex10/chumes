@@ -52,7 +52,11 @@ export function EventKanbanColumn({ status, events }: EventKanbanColumnProps) {
             </p>
           ) : (
             events.map((event) => (
-              <EventKanbanCard key={event.id} event={event} />
+              <EventKanbanCard
+                key={event.id}
+                event={event}
+                showInvoiceStatus={status.phase === "OPERATIONAL"}
+              />
             ))
           )}
         </div>

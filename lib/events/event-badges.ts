@@ -1,4 +1,5 @@
 import { computeDatesStatus } from "@/lib/events/dates-status";
+import { EVENT_PHASE } from "@/lib/events/constants";
 import type { EventWithRelations } from "@/lib/supabase/types";
 
 export type EventBadge = {
@@ -56,7 +57,10 @@ export function getEventBadges(event: EventWithRelations): EventBadge[] {
     }
   }
 
-  if (linkedQuote?.quote_statuses?.name) {
+  if (
+    linkedQuote?.quote_statuses?.name &&
+    event.event_statuses.phase !== EVENT_PHASE.OPERATIONAL
+  ) {
     badges.push({
       key: "quote-status",
       label: linkedQuote.quote_statuses.name,

@@ -8,6 +8,10 @@ import {
 } from "@react-pdf/renderer";
 import type { EventReservationPdfData } from "@/lib/events/pdf/types";
 import {
+  FINANCIAL_MOVEMENT_TYPE,
+  PAYMENT_STATUS_LABELS,
+} from "@/lib/payments/constants";
+import {
   CHUMES_COMPANY,
   CHUMES_LOGO_PATH,
   RESERVATION_PDF_FOOTER,
@@ -147,6 +151,51 @@ const styles = StyleSheet.create({
     fontFamily: "Helvetica-Bold",
     fontSize: 11,
   },
+  paymentSection: {
+    marginTop: 16,
+    marginLeft: "auto",
+    width: 280,
+  },
+  paymentSectionTitle: {
+    fontSize: 10,
+    fontFamily: "Helvetica-Bold",
+    marginBottom: 8,
+    color: "#111827",
+  },
+  summaryRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 4,
+    fontSize: 9,
+  },
+  summaryLabel: {
+    color: "#374151",
+  },
+  movementRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 3,
+    paddingLeft: 8,
+    fontSize: 8,
+    color: "#6b7280",
+  },
+  summaryTotal: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 6,
+    paddingTop: 6,
+    borderTopWidth: 1,
+    borderTopColor: "#e5e7eb",
+    fontFamily: "Helvetica-Bold",
+    fontSize: 10,
+  },
+  paymentStatus: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 4,
+    fontSize: 9,
+    color: "#374151",
+  },
   notes: {
     fontSize: 9,
     color: "#374151",
@@ -191,12 +240,19 @@ function buildNotes(data: EventReservationPdfData): string | null {
 }
 
 export function ReservationPdfDocument({ data }: ReservationPdfDocumentProps) {
-  const { event, quote } = data;
+  const { event, quote, paymentSummary, movements } = data;
   const customer = event.customers;
   const items = quote.quote_items ?? [];
   const phone = event.customer_contacts?.phone ?? customer.phone ?? null;
   const notes = buildNotes(data);
   const hasDelivery = quote.delivery_fee != null && Number(quote.delivery_fee) > 0;
+  const advanceMovements = movements.filter(
+    (m) => m.movement_type === FINANCIAL_MOVEMENT_TYPE.ADVANCE,
+  );
+  const refundMovements = movements.filter(
+    (m) => m.movement_type === FINANCIAL_MOVEMENT_TYPE.REFUND,
+  );
+  const paymentStatusLabel = PAYMENT_STATUS_LABELS[paymentSummary.paymentStatus];
 
   return (
     <Document>
@@ -299,6 +355,53 @@ export function ReservationPdfDocument({ data }: ReservationPdfDocumentProps) {
         <View style={styles.totalRow}>
           <Text>Total confirmado</Text>
           <Text>{formatPdfCurrency(Number(quote.total))}</Text>
+        </View>
+
+        <View style={styles.paymentSection}>
+          <Text style={styles.paymentSectionTitle}>Resumen de pagos</Text>
+
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryLabel}>Adelantos recibidos</Text>
+            <Text>{formatPdfCurrency(paymentSummary.totalAdvances)}</Text>
+          </View>
+
+          {advanceMovements.map((movement) => (
+            <View key={movement.id} style={styles.movementRow}>
+              <Text>
+                {formatPdfDateTime(movement.movement_date)} ·{" "}
+                {movement.payment_methods.name}
+              </Text>
+              <Text>{formatPdfCurrency(Number(movement.amount))}</Text>
+            </View>
+          ))}
+
+          {paymentSummary.totalRefunds > 0 ? (
+            <>
+              <View style={styles.summaryRow}>
+                <Text style={styles.summaryLabel}>Devoluciones</Text>
+                <Text>{formatPdfCurrency(paymentSummary.totalRefunds)}</Text>
+              </View>
+              {refundMovements.map((movement) => (
+                <View key={movement.id} style={styles.movementRow}>
+                  <Text>
+                    {formatPdfDateTime(movement.movement_date)} ·{" "}
+                    {movement.payment_methods.name}
+                  </Text>
+                  <Text>{formatPdfCurrency(Number(movement.amount))}</Text>
+                </View>
+              ))}
+            </>
+          ) : null}
+
+          <View style={styles.summaryTotal}>
+            <Text>Saldo pendiente al entregar</Text>
+            <Text>{formatPdfCurrency(paymentSummary.balanceDue)}</Text>
+          </View>
+
+          <View style={styles.paymentStatus}>
+            <Text>Estado de pago</Text>
+            <Text>{paymentStatusLabel}</Text>
+          </View>
         </View>
 
         <View style={styles.footer}>
