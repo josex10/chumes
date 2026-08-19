@@ -1,5 +1,8 @@
 import { notFound } from "next/navigation";
-import { getCustomers, getCustomerTypes } from "@/lib/customers/queries";
+import { getEventById, getLinkableEventsForCustomer } from "@/lib/events/queries";
+import { getStatusPhase } from "@/lib/events/status-transitions";
+import { EVENT_PHASE } from "@/lib/events/constants";
+import { getCustomerTypes } from "@/lib/customers/queries";
 import { getProductCategories, getQuotableProducts } from "@/lib/products/queries";
 import {
   getDefaultTax,
@@ -9,8 +12,8 @@ import {
   getQuoteLineTypes,
   getTaxes,
 } from "@/lib/quotes/queries";
-import { QuoteDownloadButton } from "@/components/quotes/quote-download-button";
 import { QuoteForm } from "@/components/quotes/quote-form";
+import { QuotePageHeader } from "@/components/quotes/quote-page-header";
 
 export const dynamic = "force-dynamic";
 
@@ -23,7 +26,6 @@ export default async function EditQuotePage({
 
   const [
     quote,
-    customers,
     customerTypes,
     products,
     categories,
@@ -34,7 +36,6 @@ export default async function EditQuotePage({
     defaultTax,
   ] = await Promise.all([
     getQuoteById(id),
-    getCustomers(),
     getCustomerTypes(),
     getQuotableProducts(),
     getProductCategories(),
@@ -49,13 +50,28 @@ export default async function EditQuotePage({
     notFound();
   }
 
+  let canUnlink = false;
+  let linkableEvents: Awaited<ReturnType<typeof getLinkableEventsForCustomer>> = [];
+
+  if (quote.event_id) {
+    const linkedEvent = await getEventById(quote.event_id);
+    canUnlink =
+      linkedEvent !== null &&
+      getStatusPhase(linkedEvent.event_statuses.code) === EVENT_PHASE.COMMERCIAL;
+  } else {
+    linkableEvents = await getLinkableEventsForCustomer(quote.customer_id);
+  }
+
   return (
     <main className="mx-auto flex w-full max-w-[1400px] flex-1 flex-col gap-6 px-6 py-8">
-      <div className="flex justify-end">
-        <QuoteDownloadButton quoteId={quote.id} />
-      </div>
+      <QuotePageHeader
+        quoteId={quote.id}
+        quoteNumber={quote.quote_number}
+        eventId={quote.event_id}
+        canUnlink={canUnlink}
+        linkableEvents={linkableEvents}
+      />
       <QuoteForm
-        customers={customers}
         customerTypes={customerTypes}
         products={products}
         categories={categories}
@@ -65,6 +81,7 @@ export default async function EditQuotePage({
         discountCodes={discountCodes}
         defaultTaxId={defaultTax?.id}
         quote={quote}
+        hideTitle
       />
     </main>
   );

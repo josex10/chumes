@@ -125,7 +125,7 @@ export async function getQuoteById(id: string): Promise<QuoteWithRelations | nul
   const { data, error } = await supabase
     .from("quotes")
     .select(
-      "*, customers(*, customer_types(*)), quote_statuses(*), delivery_zones(*), discount_codes(*), quote_items(*, products(*), quote_line_types(*), taxes(*))",
+      "*, customers(*, customer_types(*)), quote_statuses(*), delivery_zones(*), delivery_taxes:taxes!quotes_delivery_tax_id_fkey(*), discount_codes(*), quote_items(*, products(*), quote_line_types(*), taxes(*))",
     )
     .eq("id", id)
     .maybeSingle();
@@ -143,6 +143,25 @@ export async function getQuoteById(id: string): Promise<QuoteWithRelations | nul
   }
 
   return quote;
+}
+
+export async function getLinkableQuotesForCustomer(
+  customerId: string,
+): Promise<QuoteWithRelations[]> {
+  const supabase = createAdminSupabaseClient();
+  const { data, error } = await supabase
+    .from("quotes")
+    .select("*, customers(*, customer_types(*)), quote_statuses(*)")
+    .eq("customer_id", customerId)
+    .is("event_id", null)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error("[getLinkableQuotesForCustomer]", error.message);
+    return [];
+  }
+
+  return (data ?? []) as QuoteWithRelations[];
 }
 
 export async function getDiscountCodeByCode(code: string): Promise<DiscountCode | null> {

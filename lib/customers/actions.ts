@@ -2,7 +2,13 @@
 
 import { revalidatePath } from "next/cache";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
-import { getCustomerById } from "@/lib/customers/queries";
+import {
+  getCustomerById,
+  searchCustomers,
+  searchCustomersForCombobox,
+  type SearchCustomersParams,
+  type SearchCustomersResult,
+} from "@/lib/customers/queries";
 import {
   customerFormSchema,
   toCustomerPayload,
@@ -96,4 +102,20 @@ export async function createCustomerAndFetch(
   }
 
   return { success: true, customerId: result.customerId, customer };
+}
+
+export async function searchCustomersAction(
+  params: SearchCustomersParams,
+): Promise<SearchCustomersResult> {
+  return searchCustomersForCombobox(params);
+}
+
+export async function searchCustomersListAction(
+  params: SearchCustomersParams,
+): Promise<SearchCustomersResult> {
+  return searchCustomers(params);
+}
+
+export async function getCustomerByIdAction(id: string) {
+  return getCustomerById(id);
 }

@@ -23,6 +23,8 @@ export type SearchComboboxItem = {
   label: string;
   searchText?: string;
   description?: string;
+  disabled?: boolean;
+  disabledReason?: string;
 };
 
 type SearchComboboxProps = {
@@ -119,16 +121,18 @@ export function SearchCombobox({
                   key={item.value}
                   value={item.value}
                   data-checked={value === item.value}
+                  disabled={item.disabled}
                   onSelect={(currentValue) => {
+                    if (item.disabled) return;
                     onValueChange(currentValue);
                     setOpen(false);
                   }}
                 >
                   <div className="min-w-0 flex-1">
                     <p className="truncate">{item.label}</p>
-                    {item.description ? (
+                    {item.description || item.disabledReason ? (
                       <p className="truncate text-xs text-muted-foreground">
-                        {item.description}
+                        {item.disabledReason ?? item.description}
                       </p>
                     ) : null}
                   </div>

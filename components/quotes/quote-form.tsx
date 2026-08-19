@@ -7,6 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
 import { createQuote, updateQuote } from "@/lib/quotes/actions";
 import { calculateQuoteTotals, getTaxRate } from "@/lib/quotes/calculations";
+import { DISCOUNT_TYPE } from "@/lib/quotes/constants";
 import { getDefaultValidUntilDate } from "@/lib/quotes/format";
 import {
   quoteFormSchema,
@@ -23,6 +24,7 @@ import type {
   QuoteWithRelations,
   Tax,
 } from "@/lib/supabase/types";
+import { QuoteDeliveryBar } from "@/components/quotes/quote-delivery-bar";
 import { QuoteDocumentFooter } from "@/components/quotes/quote-document-footer";
 import { QuoteDocumentHeader } from "@/components/quotes/quote-document-header";
 import { QuoteLineItems } from "@/components/quotes/quote-line-items";
@@ -30,7 +32,6 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 type QuoteFormProps = {
-  customers: CustomerWithRelations[];
   customerTypes: CustomerType[];
   products: QuotableProduct[];
   categories: ProductCategory[];
@@ -40,20 +41,28 @@ type QuoteFormProps = {
   discountCodes: DiscountCode[];
   defaultTaxId?: number;
   quote?: QuoteWithRelations;
+  eventId?: string;
+  defaultCustomer?: CustomerWithRelations;
+  hideTitle?: boolean;
 };
 
 function buildInitialValues(
   quote: QuoteWithRelations | undefined,
   lineTypes: QuoteLineType[],
   defaultTaxId?: number,
+  defaultCustomer?: CustomerWithRelations,
 ): QuoteFormValues {
   if (!quote) {
     return {
-      customer_id: "",
+      customer_id: defaultCustomer?.id ?? "",
       estimated_location: "",
       delivery_zone_id: null,
       delivery_fee: null,
+      delivery_tax_id: defaultTaxId ?? null,
+      discount_mode: "none",
       discount_code: "",
+      manual_discount_type: DISCOUNT_TYPE.FIXED,
+      manual_discount_value: null,
       notes: "",
       valid_until: getDefaultValidUntilDate(),
       items: [
@@ -74,7 +83,15 @@ function buildInitialValues(
     estimated_location: quote.estimated_location ?? "",
     delivery_zone_id: quote.delivery_zone_id,
     delivery_fee: quote.delivery_fee,
+    delivery_tax_id: quote.delivery_tax_id,
+    discount_mode: quote.discount_codes?.code
+      ? "code"
+      : quote.manual_discount_value
+        ? "manual"
+        : "none",
     discount_code: quote.discount_codes?.code ?? "",
+    manual_discount_type: quote.manual_discount_type ?? DISCOUNT_TYPE.FIXED,
+    manual_discount_value: quote.manual_discount_value,
     notes: quote.notes ?? "",
     valid_until: quote.valid_until ?? "",
     items:
@@ -90,7 +107,6 @@ function buildInitialValues(
 }
 
 export function QuoteForm({
-  customers: initialCustomers,
   customerTypes,
   products: initialProducts,
   categories,
@@ -100,11 +116,13 @@ export function QuoteForm({
   discountCodes,
   defaultTaxId,
   quote,
+  eventId,
+  defaultCustomer,
+  hideTitle = false,
 }: QuoteFormProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [customers, setCustomers] = useState(initialCustomers);
   const [products, setProducts] = useState(initialProducts);
   const isEditing = Boolean(quote);
   const isLocked = quote?.is_locked ?? false;
@@ -122,7 +140,12 @@ export function QuoteForm({
 
   const form = useForm<QuoteFormValues>({
     resolver: zodResolver(quoteFormSchema),
-    defaultValues: buildInitialValues(quote, lineTypes, defaultTaxId),
+    defaultValues: buildInitialValues(
+      quote,
+      lineTypes,
+      defaultTaxId,
+      defaultCustomer,
+    ),
   });
 
   const {
@@ -138,14 +161,29 @@ export function QuoteForm({
 
   const summary = useMemo(() => {
     const discountCode =
-      discountCodes.find(
-        (code) =>
-          code.code.toUpperCase() ===
-          (watchedValues.discount_code?.trim().toUpperCase() ?? ""),
-      ) ?? null;
+      watchedValues.discount_mode === "code"
+        ? discountCodes.find(
+            (code) =>
+              code.code.toUpperCase() ===
+              (watchedValues.discount_code?.trim().toUpperCase() ?? ""),
+          ) ?? null
+        : null;
+
+    const manualDiscount =
+      watchedValues.discount_mode === "manual" &&
+      watchedValues.manual_discount_value != null &&
+      watchedValues.manual_discount_value > 0
+        ? {
+            discount_type: watchedValues.manual_discount_type,
+            value: watchedValues.manual_discount_value,
+          }
+        : null;
 
     const lines = (watchedValues.items ?? []).map((item) => {
-      const tax = taxes.find((entry) => entry.id === item.tax_id);
+      const tax =
+        item.tax_id != null
+          ? taxes.find((entry) => entry.id === item.tax_id)
+          : null;
       return {
         quantity: Number(item.quantity) || 0,
         unit_price: Number(item.unit_price) || 0,
@@ -161,12 +199,25 @@ export function QuoteForm({
       selectedZone?.suggested_fee ??
       0;
 
+    const deliveryTax =
+      watchedValues.delivery_tax_id != null
+        ? taxes.find((entry) => entry.id === watchedValues.delivery_tax_id)
+        : null;
+
     return calculateQuoteTotals({
       lines,
       discountCode,
+      manualDiscount,
       deliveryFee: Number(deliveryFee) || 0,
+      deliveryTaxRate: getTaxRate(deliveryTax),
     });
   }, [watchedValues, discountCodes, taxes, deliveryZones]);
+
+  const selectedDeliveryZone = deliveryZones.find(
+    (zone) => zone.id === watchedValues.delivery_zone_id,
+  );
+  const deliveryFeeDisplay =
+    watchedValues.delivery_fee ?? selectedDeliveryZone?.suggested_fee ?? 0;
 
   function handleZoneChange(zoneId: number | null) {
     setValue("delivery_zone_id", zoneId);
@@ -177,10 +228,6 @@ export function QuoteForm({
   }
 
   function handleCustomerCreated(customer: CustomerWithRelations) {
-    setCustomers((current) => {
-      if (current.some((entry) => entry.id === customer.id)) return current;
-      return [...current, customer].sort((a, b) => a.name.localeCompare(b.name));
-    });
     setValue("customer_id", customer.id);
   }
 
@@ -195,16 +242,26 @@ export function QuoteForm({
     setSubmitError(null);
 
     startTransition(async () => {
-      const result = isEditing
-        ? await updateQuote(quote!.id, values)
-        : await createQuote(values);
+      let result;
+      if (isEditing) {
+        result = await updateQuote(quote!.id, values);
+      } else if (eventId) {
+        const { createQuoteForEvent } = await import("@/lib/events/actions");
+        result = await createQuoteForEvent(eventId, values);
+      } else {
+        result = await createQuote(values);
+      }
 
       if (!result.success) {
         setSubmitError(result.error);
         return;
       }
 
-      router.push("/quotes");
+      if (eventId && result.quoteId) {
+        router.push(`/events/${eventId}`);
+      } else {
+        router.push("/quotes");
+      }
       router.refresh();
     });
   }
@@ -219,11 +276,22 @@ export function QuoteForm({
           control={control}
           register={register}
           errors={errors}
-          customers={customers}
           customerTypes={customerTypes}
+          defaultCustomer={quote?.customers ?? defaultCustomer}
           onCustomerCreated={handleCustomerCreated}
           isEditing={isEditing}
           quoteNumber={quote?.quote_number}
+          disabled={isLocked}
+          hideTitle={hideTitle}
+        />
+
+        <QuoteDeliveryBar
+          control={control}
+          register={register}
+          deliveryZones={deliveryZones}
+          deliveryZoneItems={deliveryZoneItems}
+          onZoneChange={handleZoneChange}
+          suggestedFee={selectedDeliveryZone?.suggested_fee}
           disabled={isLocked}
         />
 
@@ -240,18 +308,23 @@ export function QuoteForm({
           defaultTaxId={defaultTaxId}
           disabled={isLocked}
           onProductCreated={handleProductCreated}
+          deliveryFee={Number(deliveryFeeDisplay) || 0}
+          deliveryZoneName={selectedDeliveryZone?.name}
+          deliveryTaxId={watchedValues.delivery_tax_id}
+          onDeliveryTaxChange={(taxId) =>
+            setValue("delivery_tax_id", taxId, { shouldValidate: true })
+          }
+          calculatedLineTotals={summary.lines}
+          deliveryLineTotal={summary.delivery_line_total}
         />
 
         <QuoteDocumentFooter
           control={control}
           register={register}
-          deliveryZones={deliveryZones}
-          deliveryZoneItems={deliveryZoneItems}
-          onZoneChange={handleZoneChange}
           subtotal={summary.subtotal}
+          taxableSubtotal={summary.taxable_subtotal}
           taxTotal={summary.tax_total}
           discountAmount={summary.discount_amount}
-          deliveryFee={summary.delivery_fee}
           total={summary.total}
           disabled={isLocked}
         />

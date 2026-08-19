@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { QUOTE_LINE_TYPE } from "@/lib/quotes/constants";
+import { DISCOUNT_TYPE } from "@/lib/quotes/constants";
 
 export const quoteLineItemSchema = z.object({
   product_id: z.string().uuid("Seleccione un producto"),
@@ -15,7 +15,11 @@ export const quoteFormSchema = z.object({
   estimated_location: z.string().trim().optional(),
   delivery_zone_id: z.coerce.number().int().positive().optional().nullable(),
   delivery_fee: z.coerce.number().nonnegative().optional().nullable(),
+  delivery_tax_id: z.coerce.number().int().positive().optional().nullable(),
+  discount_mode: z.enum(["none", "code", "manual"]),
   discount_code: z.string().trim().optional(),
+  manual_discount_type: z.enum([DISCOUNT_TYPE.PERCENTAGE, DISCOUNT_TYPE.FIXED]),
+  manual_discount_value: z.coerce.number().nonnegative().optional().nullable(),
   notes: z.string().trim().optional(),
   valid_until: z.string().trim().optional(),
   items: z.array(quoteLineItemSchema).min(1, "Add at least one line item"),

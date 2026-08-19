@@ -1,5 +1,9 @@
 import Link from "next/link";
-import { getCustomers } from "@/lib/customers/queries";
+import { Suspense } from "react";
+import { CUSTOMER_LIST_PAGE_SIZE } from "@/lib/customers/constants";
+import { searchCustomers } from "@/lib/customers/queries";
+import { CustomersPagination } from "@/components/customers/customers-pagination";
+import { CustomersToolbar } from "@/components/customers/customers-toolbar";
 import { buttonVariants } from "@/components/ui/button";
 import {
   Table,
@@ -13,67 +17,94 @@ import { cn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
-export default async function CustomersPage() {
-  const customers = await getCustomers();
+type CustomersPageProps = {
+  searchParams: Promise<{ q?: string; page?: string }>;
+};
+
+export default async function CustomersPage({ searchParams }: CustomersPageProps) {
+  const { q = "", page: pageParam } = await searchParams;
+  const page = Math.max(1, Number(pageParam) || 1);
+  const result = await searchCustomers({
+    query: q,
+    page,
+    pageSize: CUSTOMER_LIST_PAGE_SIZE,
+  });
+  const totalPages = Math.max(1, Math.ceil(result.total / CUSTOMER_LIST_PAGE_SIZE));
 
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-8 px-6 py-10">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-semibold tracking-tight">Customers</h1>
+          <h1 className="text-3xl font-semibold tracking-tight">Clientes</h1>
           <p className="mt-2 text-muted-foreground">
-            Manage customer records for Chumes operations.
+            Administra los clientes de Chumes.
           </p>
         </div>
         <Link href="/customers/new" className={cn(buttonVariants({ variant: "add" }))}>
-          New customer
+          Nuevo cliente
         </Link>
       </div>
 
-      {customers.length === 0 ? (
+      <Suspense fallback={<div className="h-8 max-w-md rounded-md bg-muted" />}>
+        <CustomersToolbar initialQuery={q} />
+      </Suspense>
+
+      {result.customers.length === 0 ? (
         <div className="rounded-lg border border-dashed p-10 text-center">
-          <p className="text-muted-foreground">No customers yet.</p>
-          <Link
-            href="/customers/new"
-            className={cn(buttonVariants({ variant: "add" }), "mt-4 inline-flex")}
-          >
-            Add your first customer
-          </Link>
+          <p className="text-muted-foreground">
+            {q.trim()
+              ? `No se encontraron clientes para "${q.trim()}".`
+              : "Aún no hay clientes."}
+          </p>
+          {!q.trim() && (
+            <Link
+              href="/customers/new"
+              className={cn(buttonVariants({ variant: "add" }), "mt-4 inline-flex")}
+            >
+              Agregar primer cliente
+            </Link>
+          )}
         </div>
       ) : (
-        <div className="rounded-lg border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Identification</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Phone</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {customers.map((customer) => (
-                <TableRow key={customer.id}>
-                  <TableCell className="font-medium">{customer.name}</TableCell>
-                  <TableCell>{customer.identification ?? "—"}</TableCell>
-                  <TableCell>{customer.customer_types.name}</TableCell>
-                  <TableCell>{customer.email ?? "—"}</TableCell>
-                  <TableCell>{customer.phone ?? "—"}</TableCell>
-                  <TableCell className="text-right">
-                    <Link
-                      href={`/customers/${customer.id}/edit`}
-                      className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}
-                    >
-                      Edit
-                    </Link>
-                  </TableCell>
+        <>
+          <div className="rounded-lg border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Nombre</TableHead>
+                  <TableHead>Identificación</TableHead>
+                  <TableHead>Tipo</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Teléfono</TableHead>
+                  <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+              </TableHeader>
+              <TableBody>
+                {result.customers.map((customer) => (
+                  <TableRow key={customer.id}>
+                    <TableCell className="font-medium">{customer.name}</TableCell>
+                    <TableCell>{customer.identification ?? "—"}</TableCell>
+                    <TableCell>{customer.customer_types.name}</TableCell>
+                    <TableCell>{customer.email ?? "—"}</TableCell>
+                    <TableCell>{customer.phone ?? "—"}</TableCell>
+                    <TableCell className="text-right">
+                      <Link
+                        href={`/customers/${customer.id}/edit`}
+                        className={cn(
+                          buttonVariants({ variant: "ghost", size: "sm" }),
+                        )}
+                      >
+                        Editar
+                      </Link>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+
+          <CustomersPagination page={page} totalPages={totalPages} query={q} />
+        </>
       )}
     </main>
   );

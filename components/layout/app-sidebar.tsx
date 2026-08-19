@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  CalendarDays,
   FileText,
   LayoutDashboard,
   Package,
@@ -12,6 +13,7 @@ import { cn } from "@/lib/utils";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/events", label: "Eventos", icon: CalendarDays },
   { href: "/customers", label: "Clientes", icon: Users },
   { href: "/products", label: "Productos", icon: Package },
   { href: "/quotes", label: "Cotizaciones", icon: FileText },

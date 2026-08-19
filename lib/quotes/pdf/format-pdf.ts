@@ -27,3 +27,36 @@ export function formatPdfTaxRate(rate: number): string {
   if (rate <= 0) return "Exento";
   return `${Math.round(rate * 10000) / 100}%`;
 }
+
+export function formatPdfDateTime(value: string | null | undefined): string {
+  if (!value) return "—";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+
+  return date.toLocaleString("es-CR", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
+}
+
+export function formatPdfEventDate(value: string | null | undefined): string {
+  if (!value) return "—";
+
+  const date = value.includes("T")
+    ? new Date(value)
+    : new Date(`${value}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return value;
+
+  return date.toLocaleDateString("es-CR", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+}

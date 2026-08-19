@@ -71,12 +71,30 @@ async function resolveQuoteContext(values: QuoteFormValues) {
   const deliveryFee =
     values.delivery_fee ?? deliverySuggestedFee ?? 0;
 
+  const deliveryTaxId =
+    values.delivery_tax_id === null
+      ? null
+      : values.delivery_tax_id != null
+        ? values.delivery_tax_id
+        : defaultTax?.id ?? null;
+
   let discountCode = null;
-  if (values.discount_code?.trim()) {
+  let manualDiscount: Pick<import("@/lib/supabase/types").DiscountCode, "discount_type" | "value"> | null = null;
+
+  if (values.discount_mode === "code" && values.discount_code?.trim()) {
     discountCode = await getDiscountCodeByCode(values.discount_code);
     if (!discountCode) {
       throw new Error("Invalid or inactive discount code.");
     }
+  } else if (
+    values.discount_mode === "manual" &&
+    values.manual_discount_value != null &&
+    values.manual_discount_value > 0
+  ) {
+    manualDiscount = {
+      discount_type: values.manual_discount_type,
+      value: values.manual_discount_value,
+    };
   }
 
   const taxRates = new Map<number, number>();
@@ -86,7 +104,12 @@ async function resolveQuoteContext(values: QuoteFormValues) {
   }
 
   const lineInputs = values.items.map((item) => {
-    const taxId = item.tax_id ?? defaultTax?.id ?? null;
+    const taxId =
+      item.tax_id === null
+        ? null
+        : item.tax_id != null
+          ? item.tax_id
+          : defaultTax?.id ?? null;
     const taxRate = taxId ? taxRates.get(taxId) ?? 0 : 0;
     return {
       product_id: item.product_id,
@@ -99,6 +122,8 @@ async function resolveQuoteContext(values: QuoteFormValues) {
     };
   });
 
+  const deliveryTaxRate = deliveryTaxId ? taxRates.get(deliveryTaxId) ?? 0 : 0;
+
   const totals = calculateQuoteTotals({
     lines: lineInputs.map((line) => ({
       quantity: line.quantity,
@@ -106,13 +131,18 @@ async function resolveQuoteContext(values: QuoteFormValues) {
       tax_rate: line.tax_rate,
     })),
     discountCode,
+    manualDiscount,
     deliveryFee: Number(deliveryFee),
+    deliveryTaxRate,
   });
 
   return {
     deliverySuggestedFee,
     deliveryFee: totals.delivery_fee,
+    deliveryTaxId,
+    deliveryTaxAmount: totals.delivery_tax_amount,
     discountCode,
+    manualDiscount,
     lineInputs,
     totals,
   };
@@ -165,8 +195,12 @@ export async function createQuote(values: QuoteFormValues): Promise<ActionResult
         delivery_zone_id: parsed.data.delivery_zone_id ?? null,
         delivery_suggested_fee: context.deliverySuggestedFee,
         delivery_fee: context.deliveryFee,
+        delivery_tax_id: context.deliveryTaxId,
+        delivery_tax_amount: context.deliveryTaxAmount,
         discount_code_id: context.discountCode?.id ?? null,
         discount_amount: context.totals.discount_amount,
+        manual_discount_type: context.manualDiscount?.discount_type ?? null,
+        manual_discount_value: context.manualDiscount?.value ?? null,
         subtotal: context.totals.subtotal,
         tax_total: context.totals.tax_total,
         total: context.totals.total,
@@ -243,8 +277,12 @@ export async function updateQuote(
         delivery_zone_id: parsed.data.delivery_zone_id ?? null,
         delivery_suggested_fee: context.deliverySuggestedFee,
         delivery_fee: context.deliveryFee,
+        delivery_tax_id: context.deliveryTaxId,
+        delivery_tax_amount: context.deliveryTaxAmount,
         discount_code_id: context.discountCode?.id ?? null,
         discount_amount: context.totals.discount_amount,
+        manual_discount_type: context.manualDiscount?.discount_type ?? null,
+        manual_discount_value: context.manualDiscount?.value ?? null,
         subtotal: context.totals.subtotal,
         tax_total: context.totals.tax_total,
         total: context.totals.total,
@@ -293,13 +331,6 @@ export async function updateQuoteStatus(
   id: string,
   nextStatusCode: string,
 ): Promise<ActionResult> {
-  if (nextStatusCode === QUOTE_STATUS.CONVERTED) {
-    return {
-      success: false,
-      error: "Event module coming soon. Conversion is not available yet.",
-    };
-  }
-
   try {
     const { userId } = await auth();
     const supabase = createAdminSupabaseClient();

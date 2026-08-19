@@ -13,42 +13,56 @@ type QuoteDocumentHeaderProps = {
   control: Control<QuoteFormValues>;
   register: UseFormRegister<QuoteFormValues>;
   errors: FieldErrors<QuoteFormValues>;
-  customers: CustomerWithRelations[];
   customerTypes: CustomerType[];
+  defaultCustomer?: CustomerWithRelations;
   onCustomerCreated: (customer: CustomerWithRelations) => void;
   isEditing: boolean;
   quoteNumber?: string;
   disabled?: boolean;
+  hideTitle?: boolean;
 };
 
 export function QuoteDocumentHeader({
   control,
   register,
   errors,
-  customers,
   customerTypes,
+  defaultCustomer,
   onCustomerCreated,
   isEditing,
   quoteNumber,
   disabled = false,
+  hideTitle = false,
 }: QuoteDocumentHeaderProps) {
   const [customerModalOpen, setCustomerModalOpen] = useState(false);
+  const [createdCustomer, setCreatedCustomer] = useState<
+    CustomerWithRelations | undefined
+  >();
+
+  const activeCustomer = createdCustomer ?? defaultCustomer;
+
+  function handleCustomerCreated(customer: CustomerWithRelations) {
+    setCreatedCustomer(customer);
+    onCustomerCreated(customer);
+  }
 
   return (
     <>
       <div className="space-y-6 border-b border-border/60 pb-6">
-        <div>
-          <h2 className="text-2xl font-medium tracking-tight">
-            {isEditing ? "Editar cotización" : "Nueva cotización"}
-          </h2>
-          {quoteNumber ? (
-            <p className="mt-1 text-sm text-muted-foreground">Nº {quoteNumber}</p>
-          ) : (
-            <p className="mt-1 text-sm text-muted-foreground">
-              Complete los datos del documento
-            </p>
-          )}
-        </div>
+        {!hideTitle && (
+          <div>
+            <h2 className="text-2xl font-medium tracking-tight">
+              {isEditing ? "Editar cotización" : "Nueva cotización"}
+            </h2>
+            {quoteNumber ? (
+              <p className="mt-1 text-sm text-muted-foreground">Nº {quoteNumber}</p>
+            ) : (
+              <p className="mt-1 text-sm text-muted-foreground">
+                Complete los datos del documento
+              </p>
+            )}
+          </div>
+        )}
 
         <div className="grid gap-4 md:grid-cols-3">
           <div className="min-w-0 space-y-2">
@@ -59,7 +73,7 @@ export function QuoteDocumentHeader({
               render={({ field }) => (
                 <CustomerCombobox
                   id="customer_id"
-                  customers={customers}
+                  defaultCustomer={activeCustomer}
                   value={field.value || undefined}
                   onValueChange={field.onChange}
                   disabled={disabled}
@@ -93,7 +107,7 @@ export function QuoteDocumentHeader({
         open={customerModalOpen}
         onOpenChange={setCustomerModalOpen}
         customerTypes={customerTypes}
-        onCreated={onCustomerCreated}
+        onCreated={handleCustomerCreated}
       />
     </>
   );

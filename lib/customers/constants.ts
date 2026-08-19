@@ -1,10 +1,3 @@
-export const CUSTOMER_TYPE = {
-  INDIVIDUAL: "INDIVIDUAL",
-  COMPANY: "COMPANY",
-  GOVERNMENT: "GOVERNMENT",
-  EVENT_PLANNER: "EVENT_PLANNER",
-  VENUE: "VENUE",
-} as const;
-
-export type CustomerTypeCode =
-  (typeof CUSTOMER_TYPE)[keyof typeof CUSTOMER_TYPE];
+export const CUSTOMER_COMBOBOX_PAGE_SIZE = 10;
+export const CUSTOMER_LIST_PAGE_SIZE = 20;
+export const CUSTOMER_SEARCH_DEBOUNCE_MS = 300;

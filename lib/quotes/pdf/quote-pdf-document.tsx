@@ -262,12 +262,6 @@ export function QuotePdfDocument({ quote }: QuotePdfDocumentProps) {
                 {quote.delivery_zones?.name ? (
                   <InfoRow label="Zona" value={quote.delivery_zones.name} />
                 ) : null}
-                {quote.delivery_fee != null ? (
-                  <InfoRow
-                    label="Costo"
-                    value={formatPdfCurrency(Number(quote.delivery_fee))}
-                  />
-                ) : null}
               </>
             ) : (
               <Text style={styles.infoValue}>—</Text>
@@ -318,6 +312,38 @@ export function QuotePdfDocument({ quote }: QuotePdfDocumentProps) {
               </Text>
             </View>
           ))}
+          {quote.delivery_fee != null && Number(quote.delivery_fee) >= 0 ? (
+            <View style={styles.tableRow}>
+              <View style={styles.colProduct}>
+                <Text style={styles.cellText}>Transporte</Text>
+              </View>
+              <View style={styles.colDescription}>
+                <Text style={styles.cellText}>
+                  {quote.delivery_zones?.name ?? "Entrega"}
+                </Text>
+              </View>
+              <View style={styles.colType}>
+                <Text style={styles.cellText}>—</Text>
+              </View>
+              <Text style={[styles.cellText, styles.colQty]}>1</Text>
+              <Text style={[styles.cellText, styles.colUnit]}>
+                {formatPdfCurrency(Number(quote.delivery_fee))}
+              </Text>
+              <Text style={[styles.cellText, styles.colTax]}>
+                {quote.delivery_taxes?.name ?? "—"}
+              </Text>
+              <Text style={[styles.cellText, styles.colTotal]}>
+                {formatPdfCurrency(
+                  Number(quote.delivery_fee) +
+                    Number(quote.delivery_tax_amount ?? 0) -
+                    (Number(quote.subtotal) > 0
+                      ? Number(quote.discount_amount) *
+                        (Number(quote.delivery_fee) / Number(quote.subtotal))
+                      : 0),
+                )}
+              </Text>
+            </View>
+          ) : null}
         </View>
 
         <View style={styles.summary}>
@@ -325,27 +351,33 @@ export function QuotePdfDocument({ quote }: QuotePdfDocumentProps) {
             <Text style={styles.summaryLabel}>Subtotal</Text>
             <Text>{formatPdfCurrency(Number(quote.subtotal))}</Text>
           </View>
+          {Number(quote.discount_amount) > 0 ? (
+            <>
+              <View style={styles.summaryRow}>
+                <Text style={styles.summaryLabel}>
+                  Descuento
+                  {quote.discount_codes?.code
+                    ? ` (${quote.discount_codes.code})`
+                    : quote.manual_discount_value
+                      ? " (manual)"
+                      : ""}
+                </Text>
+                <Text>-{formatPdfCurrency(Number(quote.discount_amount))}</Text>
+              </View>
+              <View style={styles.summaryRow}>
+                <Text style={styles.summaryLabel}>Base imponible</Text>
+                <Text>
+                  {formatPdfCurrency(
+                    Number(quote.subtotal) - Number(quote.discount_amount),
+                  )}
+                </Text>
+              </View>
+            </>
+          ) : null}
           <View style={styles.summaryRow}>
             <Text style={styles.summaryLabel}>Impuestos</Text>
             <Text>{formatPdfCurrency(Number(quote.tax_total))}</Text>
           </View>
-          {Number(quote.discount_amount) > 0 ? (
-            <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>
-                Descuento
-                {quote.discount_codes?.code
-                  ? ` (${quote.discount_codes.code})`
-                  : ""}
-              </Text>
-              <Text>-{formatPdfCurrency(Number(quote.discount_amount))}</Text>
-            </View>
-          ) : null}
-          {quote.delivery_fee != null ? (
-            <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Entrega</Text>
-              <Text>{formatPdfCurrency(Number(quote.delivery_fee))}</Text>
-            </View>
-          ) : null}
           <View style={styles.summaryTotal}>
             <Text>Total</Text>
             <Text>{formatPdfCurrency(Number(quote.total))}</Text>

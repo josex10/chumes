@@ -14,6 +14,7 @@ import { QUOTE_LINE_TYPE } from "@/lib/quotes/constants";
 import {
   calculateLineTotals,
   getTaxRate,
+  type CalculatedLine,
 } from "@/lib/quotes/calculations";
 import { formatCurrency } from "@/lib/quotes/format";
 import type { QuoteFormValues, QuoteLineItemValues } from "@/lib/quotes/schema";
@@ -58,6 +59,12 @@ type QuoteLineItemsProps = {
   defaultTaxId?: number;
   disabled?: boolean;
   onProductCreated: (product: QuotableProduct) => void;
+  deliveryFee?: number;
+  deliveryZoneName?: string;
+  deliveryTaxId?: number | null;
+  onDeliveryTaxChange?: (taxId: number | null) => void;
+  calculatedLineTotals?: CalculatedLine[];
+  deliveryLineTotal?: number;
 };
 
 const cellClass = "px-3 py-3 align-middle";
@@ -148,6 +155,12 @@ export function QuoteLineItems({
   defaultTaxId,
   disabled = false,
   onProductCreated,
+  deliveryFee = 0,
+  deliveryZoneName,
+  deliveryTaxId,
+  onDeliveryTaxChange,
+  calculatedLineTotals,
+  deliveryLineTotal = 0,
 }: QuoteLineItemsProps) {
   const [productModalOpen, setProductModalOpen] = useState(false);
   const [quickAddLineIndex, setQuickAddLineIndex] = useState<number | null>(null);
@@ -329,11 +342,14 @@ export function QuoteLineItems({
                   </TableCell>
                   <TableCell className={cellClass}>
                     <Input
-                      readOnly
-                      disabled
-                      tabIndex={-1}
-                      className={cn(readOnlyFieldClass, "tabular-nums")}
-                      value={formatCurrency(Number(items[index]?.unit_price) || 0)}
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      disabled={disabled}
+                      className={cn(fieldClass, "tabular-nums")}
+                      {...register(`items.${index}.unit_price`, {
+                        valueAsNumber: true,
+                      })}
                     />
                   </TableCell>
                   <TableCell className={cellClass}>
@@ -370,7 +386,10 @@ export function QuoteLineItems({
                       disabled
                       tabIndex={-1}
                       className={cn(readOnlyFieldClass, "text-right font-medium tabular-nums")}
-                      value={formatCurrency(getLineTotal(items[index], taxes))}
+                      value={formatCurrency(
+                        calculatedLineTotals?.[index]?.line_total ??
+                          getLineTotal(items[index], taxes),
+                      )}
                     />
                   </TableCell>
                   <TableCell className={cellClass}>
@@ -390,6 +409,93 @@ export function QuoteLineItems({
                 </TableRow>
               ))
             )}
+            <TableRow className="bg-muted/10 hover:bg-muted/10">
+              <TableCell className={cellClass}>
+                <Input
+                  type="number"
+                  min="1"
+                  step="1"
+                  disabled
+                  tabIndex={-1}
+                  className={cn(readOnlyFieldClass, "w-20 text-center tabular-nums")}
+                  value={1}
+                  readOnly
+                />
+              </TableCell>
+              <TableCell className={cellClass}>
+                <Input
+                  disabled
+                  tabIndex={-1}
+                  readOnly
+                  className={readOnlyFieldClass}
+                  value="Transporte"
+                />
+              </TableCell>
+              <TableCell className={cellClass}>
+                <Textarea
+                  rows={2}
+                  readOnly
+                  disabled
+                  tabIndex={-1}
+                  className={cn(readOnlyFieldClass, "min-h-9 resize-none py-2 leading-relaxed")}
+                  value={deliveryZoneName ?? "Entrega"}
+                />
+              </TableCell>
+              <TableCell className={cellClass}>
+                <Select value="transport-type" disabled items={[{ value: "transport-type", label: "—" }]}>
+                  <SelectTrigger className={readOnlyFieldClass} tabIndex={-1}>
+                    <SelectValue placeholder="—" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="transport-type">—</SelectItem>
+                  </SelectContent>
+                </Select>
+              </TableCell>
+              <TableCell className={cellClass}>
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  disabled
+                  tabIndex={-1}
+                  readOnly
+                  className={cn(readOnlyFieldClass, "tabular-nums")}
+                  value={deliveryFee}
+                />
+              </TableCell>
+              <TableCell className={cellClass}>
+                <Select
+                  value={deliveryTaxId ? String(deliveryTaxId) : "none"}
+                  onValueChange={(value) =>
+                    onDeliveryTaxChange?.(value === "none" ? null : Number(value))
+                  }
+                  disabled={disabled}
+                  items={taxItems}
+                >
+                  <SelectTrigger className={fieldClass}>
+                    <SelectValue placeholder="IVA" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Ninguno</SelectItem>
+                    {taxes.map((tax) => (
+                      <SelectItem key={tax.id} value={String(tax.id)}>
+                        {tax.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </TableCell>
+              <TableCell className={cellClass}>
+                <Input
+                  readOnly
+                  disabled
+                  tabIndex={-1}
+                  className={cn(readOnlyFieldClass, "text-right font-medium tabular-nums")}
+                  value={formatCurrency(deliveryLineTotal)}
+                />
+              </TableCell>
+              <TableCell className={cellClass} />
+            </TableRow>
           </TableBody>
         </Table>
         </div>
@@ -441,10 +547,12 @@ export function QuoteLineItems({
                   className="tabular-nums"
                 />
                 <Input
-                  readOnly
-                  disabled
-                  className={cn(readOnlyFieldClass, "tabular-nums")}
-                  value={formatCurrency(Number(items[index]?.unit_price) || 0)}
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  disabled={disabled}
+                  className={cn(fieldClass, "tabular-nums")}
+                  {...register(`items.${index}.unit_price`, { valueAsNumber: true })}
                 />
               </div>
               <div className="grid grid-cols-2 gap-3">
@@ -495,12 +603,95 @@ export function QuoteLineItems({
               <Input
                 readOnly
                 disabled
+                tabIndex={-1}
                 className={cn(readOnlyFieldClass, "text-right font-medium tabular-nums")}
-                value={formatCurrency(getLineTotal(items[index], taxes))}
+                value={formatCurrency(
+                  calculatedLineTotals?.[index]?.line_total ??
+                    getLineTotal(items[index], taxes),
+                )}
               />
             </div>
           ))
         )}
+        <div className="space-y-3 rounded-lg bg-muted/10 p-4 ring-1 ring-border/60">
+          <span className="text-xs uppercase tracking-widest text-muted-foreground">
+            Transporte
+          </span>
+          <Input
+            disabled
+            readOnly
+            tabIndex={-1}
+            className={readOnlyFieldClass}
+            value="Transporte"
+          />
+          <Textarea
+            rows={2}
+            readOnly
+            disabled
+            tabIndex={-1}
+            className={cn(readOnlyFieldClass, "min-h-9 resize-none py-2")}
+            value={deliveryZoneName ?? "Entrega"}
+          />
+          <div className="grid grid-cols-2 gap-3">
+            <Input
+              type="number"
+              min="1"
+              step="1"
+              disabled
+              readOnly
+              tabIndex={-1}
+              className={cn(readOnlyFieldClass, "tabular-nums")}
+              value={1}
+            />
+            <Input
+              type="number"
+              min="0"
+              step="0.01"
+              disabled
+              readOnly
+              tabIndex={-1}
+              className={cn(readOnlyFieldClass, "tabular-nums")}
+              value={deliveryFee}
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <Select value="transport-type" disabled items={[{ value: "transport-type", label: "—" }]}>
+              <SelectTrigger className={readOnlyFieldClass} tabIndex={-1}>
+                <SelectValue placeholder="Tipo" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="transport-type">—</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select
+              value={deliveryTaxId ? String(deliveryTaxId) : "none"}
+              onValueChange={(value) =>
+                onDeliveryTaxChange?.(value === "none" ? null : Number(value))
+              }
+              disabled={disabled}
+              items={taxItems}
+            >
+              <SelectTrigger className={fieldClass}>
+                <SelectValue placeholder="IVA" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Ninguno</SelectItem>
+                {taxes.map((tax) => (
+                  <SelectItem key={tax.id} value={String(tax.id)}>
+                    {tax.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <Input
+            readOnly
+            disabled
+            tabIndex={-1}
+            className={cn(readOnlyFieldClass, "text-right font-medium tabular-nums")}
+            value={formatCurrency(deliveryLineTotal)}
+          />
+        </div>
         </div>
       )}
 

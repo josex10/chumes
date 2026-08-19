@@ -1,4 +1,4 @@
-import type { CustomerWithRelations, QuoteWithRelations } from "@/lib/supabase/types";
+import type { CustomerWithRelations } from "@/lib/supabase/types";
 
 export type DailyPoint = {
   dayLabel: string;
@@ -90,8 +90,9 @@ function buildDailySeries<T>(
 }
 
 export function getDashboardSummary(
-  quotes: QuoteWithRelations[],
-  customers: CustomerWithRelations[],
+  quotes: import("@/lib/supabase/types").QuoteWithRelations[],
+  customersThisWeek: Pick<CustomerWithRelations, "id" | "created_at">[],
+  totalCustomers: number,
   reference = new Date(),
 ): DashboardSummary {
   const { start, end } = getWeekBounds(reference);
@@ -105,7 +106,7 @@ export function getDashboardSummary(
   );
 
   const customersDaily = buildDailySeries(
-    customers,
+    customersThisWeek,
     (c) => c.created_at,
     () => 0,
     start,
@@ -116,7 +117,7 @@ export function getDashboardSummary(
     quotesThisWeek: quotesDaily.reduce((sum, d) => sum + d.count, 0),
     quotesAmountThisWeek: quotesDaily.reduce((sum, d) => sum + d.amount, 0),
     newCustomersThisWeek: customersDaily.reduce((sum, d) => sum + d.count, 0),
-    totalCustomers: customers.length,
+    totalCustomers,
     quotesDaily,
     customersDaily,
   };

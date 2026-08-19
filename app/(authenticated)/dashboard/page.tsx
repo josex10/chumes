@@ -4,8 +4,11 @@ import { QuotesHeroChart } from "@/components/dashboard/quotes-hero-chart";
 import { QuotesWeekChart } from "@/components/dashboard/quotes-week-chart";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { getCustomers } from "@/lib/customers/queries";
-import { getDashboardSummary } from "@/lib/dashboard/stats";
+import {
+  getCustomersCount,
+  getCustomersCreatedBetween,
+} from "@/lib/customers/queries";
+import { getDashboardSummary, getWeekBounds } from "@/lib/dashboard/stats";
 import { formatCurrency } from "@/lib/quotes/format";
 import { getQuotes } from "@/lib/quotes/queries";
 import { cn } from "@/lib/utils";
@@ -13,8 +16,13 @@ import { cn } from "@/lib/utils";
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
-  const [quotes, customers] = await Promise.all([getQuotes(), getCustomers()]);
-  const summary = getDashboardSummary(quotes, customers);
+  const { start, end } = getWeekBounds();
+  const [quotes, totalCustomers, customersThisWeek] = await Promise.all([
+    getQuotes(),
+    getCustomersCount(),
+    getCustomersCreatedBetween(start, end),
+  ]);
+  const summary = getDashboardSummary(quotes, customersThisWeek, totalCustomers);
 
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-10 px-8 py-10">

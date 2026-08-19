@@ -245,13 +245,18 @@ export type Quote = {
   id: string;
   quote_number: string;
   customer_id: string;
+  event_id: string | null;
   status_id: number;
   estimated_location: string | null;
   delivery_zone_id: number | null;
   delivery_suggested_fee: number | null;
   delivery_fee: number | null;
+  delivery_tax_id: number | null;
+  delivery_tax_amount: number;
   discount_code_id: number | null;
   discount_amount: number;
+  manual_discount_type: "PERCENTAGE" | "FIXED" | null;
+  manual_discount_value: number | null;
   subtotal: number;
   tax_total: number;
   total: number;
@@ -295,6 +300,7 @@ export type QuoteWithRelations = Quote & {
   customers: CustomerWithRelations;
   quote_statuses: QuoteStatus;
   delivery_zones?: DeliveryZone | null;
+  delivery_taxes?: Tax | null;
   discount_codes?: DiscountCode | null;
   quote_items?: QuoteItemWithRelations[];
 };
@@ -302,6 +308,75 @@ export type QuoteWithRelations = Quote & {
 export type QuotableProduct = ProductWithRelations & {
   rental_price: number | null;
   sale_price: number | null;
+};
+
+export type EventStatus = {
+  id: number;
+  code: string;
+  name: string;
+  description: string | null;
+  phase: "COMMERCIAL" | "OPERATIONAL" | "TERMINAL";
+  sort_order: number;
+  is_active: boolean;
+  created_at: string;
+};
+
+export type CustomerContact = {
+  id: string;
+  customer_id: string;
+  name: string;
+  phone: string | null;
+  email: string | null;
+  role_title: string | null;
+  is_primary: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type EventSource = {
+  id: number;
+  code: string;
+  name: string;
+  description: string | null;
+  is_active: boolean;
+  is_favorite: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type Event = {
+  id: string;
+  title: string;
+  customer_id: string;
+  contact_id: string | null;
+  status_id: number;
+  source_id: number;
+  event_date: string | null;
+  delivery_date: string | null;
+  pickup_date: string | null;
+  estimated_location: string | null;
+  notes: string | null;
+  first_contact_at: string | null;
+  last_contact_at: string | null;
+  follow_up_at: string | null;
+  no_response_at: string | null;
+  lost_reason: string | null;
+  priority: "LOW" | "NORMAL" | "HIGH";
+  has_inventory_conflicts: boolean;
+  reserved_at: string | null;
+  created_at: string;
+  updated_at: string;
+  created_by: string | null;
+  updated_by: string | null;
+};
+
+export type EventWithRelations = Event & {
+  customers: CustomerWithRelations;
+  customer_contacts: CustomerContact | null;
+  event_statuses: EventStatus;
+  event_sources: EventSource;
+  quotes?: (Quote & { quote_statuses?: QuoteStatus; quote_items?: { id: string }[] })[];
 };
 
 export type Database = {
@@ -651,13 +726,18 @@ export type Database = {
         Insert: {
           quote_number: string;
           customer_id: string;
+          event_id?: string | null;
           status_id: number;
           estimated_location?: string | null;
           delivery_zone_id?: number | null;
           delivery_suggested_fee?: number | null;
           delivery_fee?: number | null;
+          delivery_tax_id?: number | null;
+          delivery_tax_amount?: number;
           discount_code_id?: number | null;
           discount_amount?: number;
+          manual_discount_type?: "PERCENTAGE" | "FIXED" | null;
+          manual_discount_value?: number | null;
           subtotal?: number;
           tax_total?: number;
           total?: number;
@@ -692,9 +772,21 @@ export type Database = {
             referencedColumns: ["id"];
           },
           {
+            foreignKeyName: "quotes_delivery_tax_id_fkey";
+            columns: ["delivery_tax_id"];
+            referencedRelation: "taxes";
+            referencedColumns: ["id"];
+          },
+          {
             foreignKeyName: "quotes_discount_code_id_fkey";
             columns: ["discount_code_id"];
             referencedRelation: "discount_codes";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "quotes_event_id_fkey";
+            columns: ["event_id"];
+            referencedRelation: "events";
             referencedColumns: ["id"];
           },
         ];
@@ -739,6 +831,104 @@ export type Database = {
             foreignKeyName: "quote_items_tax_id_fkey";
             columns: ["tax_id"];
             referencedRelation: "taxes";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      event_statuses: {
+        Row: EventStatus;
+        Insert: {
+          code: string;
+          name: string;
+          description?: string | null;
+          phase: "COMMERCIAL" | "OPERATIONAL" | "TERMINAL";
+          sort_order?: number;
+          is_active?: boolean;
+        };
+        Update: Partial<Database["public"]["Tables"]["event_statuses"]["Insert"]>;
+        Relationships: [];
+      };
+      event_sources: {
+        Row: EventSource;
+        Insert: {
+          code: string;
+          name: string;
+          description?: string | null;
+          is_active?: boolean;
+          is_favorite?: boolean;
+          sort_order?: number;
+        };
+        Update: Partial<Database["public"]["Tables"]["event_sources"]["Insert"]>;
+        Relationships: [];
+      };
+      customer_contacts: {
+        Row: CustomerContact;
+        Insert: {
+          customer_id: string;
+          name: string;
+          phone?: string | null;
+          email?: string | null;
+          role_title?: string | null;
+          is_primary?: boolean;
+        };
+        Update: Partial<Database["public"]["Tables"]["customer_contacts"]["Insert"]>;
+        Relationships: [
+          {
+            foreignKeyName: "customer_contacts_customer_id_fkey";
+            columns: ["customer_id"];
+            referencedRelation: "customers";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      events: {
+        Row: Event;
+        Insert: {
+          title: string;
+          customer_id: string;
+          contact_id?: string | null;
+          status_id: number;
+          source_id: number;
+          event_date?: string | null;
+          delivery_date?: string | null;
+          pickup_date?: string | null;
+          estimated_location?: string | null;
+          notes?: string | null;
+          first_contact_at?: string | null;
+          last_contact_at?: string | null;
+          follow_up_at?: string | null;
+          no_response_at?: string | null;
+          lost_reason?: string | null;
+          priority?: "LOW" | "NORMAL" | "HIGH";
+          has_inventory_conflicts?: boolean;
+          reserved_at?: string | null;
+          created_by?: string | null;
+          updated_by?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["events"]["Insert"]>;
+        Relationships: [
+          {
+            foreignKeyName: "events_customer_id_fkey";
+            columns: ["customer_id"];
+            referencedRelation: "customers";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "events_contact_id_fkey";
+            columns: ["contact_id"];
+            referencedRelation: "customer_contacts";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "events_status_id_fkey";
+            columns: ["status_id"];
+            referencedRelation: "event_statuses";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "events_source_id_fkey";
+            columns: ["source_id"];
+            referencedRelation: "event_sources";
             referencedColumns: ["id"];
           },
         ];

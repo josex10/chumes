@@ -1,4 +1,4 @@
-import { getCustomers, getCustomerTypes } from "@/lib/customers/queries";
+import { getCustomerById, getCustomerTypes } from "@/lib/customers/queries";
 import { getProductCategories, getQuotableProducts } from "@/lib/products/queries";
 import {
   getDefaultTax,
@@ -11,9 +11,14 @@ import { QuoteForm } from "@/components/quotes/quote-form";
 
 export const dynamic = "force-dynamic";
 
-export default async function NewQuotePage() {
+type NewQuotePageProps = {
+  searchParams: Promise<{ eventId?: string; customerId?: string }>;
+};
+
+export default async function NewQuotePage({ searchParams }: NewQuotePageProps) {
+  const { eventId, customerId } = await searchParams;
+
   const [
-    customers,
     customerTypes,
     products,
     categories,
@@ -22,8 +27,8 @@ export default async function NewQuotePage() {
     deliveryZones,
     discountCodes,
     defaultTax,
+    defaultCustomer,
   ] = await Promise.all([
-    getCustomers(),
     getCustomerTypes(),
     getQuotableProducts(),
     getProductCategories(),
@@ -32,12 +37,12 @@ export default async function NewQuotePage() {
     getDeliveryZones(),
     getDiscountCodes(),
     getDefaultTax(),
+    customerId ? getCustomerById(customerId) : Promise.resolve(null),
   ]);
 
   return (
     <main className="mx-auto flex w-full max-w-[1400px] flex-1 flex-col px-6 py-8">
       <QuoteForm
-        customers={customers}
         customerTypes={customerTypes}
         products={products}
         categories={categories}
@@ -46,6 +51,8 @@ export default async function NewQuotePage() {
         deliveryZones={deliveryZones}
         discountCodes={discountCodes}
         defaultTaxId={defaultTax?.id}
+        eventId={eventId}
+        defaultCustomer={defaultCustomer ?? undefined}
       />
     </main>
   );
