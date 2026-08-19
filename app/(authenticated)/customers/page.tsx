@@ -82,20 +82,37 @@ export default async function CustomersPage({ searchParams }: CustomersPageProps
               <TableBody>
                 {result.customers.map((customer) => (
                   <TableRow key={customer.id}>
-                    <TableCell className="font-medium">{customer.name}</TableCell>
+                    <TableCell className="font-medium">
+                      <Link
+                        href={`/customers/${customer.id}`}
+                        className="hover:underline"
+                      >
+                        {customer.name}
+                      </Link>
+                    </TableCell>
                     <TableCell>{customer.identification ?? "—"}</TableCell>
                     <TableCell>{customer.customer_types.name}</TableCell>
                     <TableCell>{customer.email ?? "—"}</TableCell>
                     <TableCell>{customer.phone ?? "—"}</TableCell>
                     <TableCell className="text-right">
-                      <Link
-                        href={`/customers/${customer.id}/edit`}
-                        className={cn(
-                          buttonVariants({ variant: "ghost", size: "sm" }),
-                        )}
-                      >
-                        Editar
-                      </Link>
+                      <div className="flex items-center justify-end gap-2">
+                        <Link
+                          href={`/customers/${customer.id}`}
+                          className={cn(
+                            buttonVariants({ variant: "ghost", size: "sm" }),
+                          )}
+                        >
+                          Ver
+                        </Link>
+                        <Link
+                          href={`/customers/${customer.id}/edit`}
+                          className={cn(
+                            buttonVariants({ variant: "ghost", size: "sm" }),
+                          )}
+                        >
+                          Editar
+                        </Link>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}

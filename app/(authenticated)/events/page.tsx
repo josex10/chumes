@@ -1,22 +1,35 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
-import { getEventById, getEventStatuses, getEvents } from "@/lib/events/queries";
-import { EVENT_PHASE } from "@/lib/events/constants";
+import { Suspense } from "react";
 import { EventsKanbanBoard } from "@/components/events/events-kanban-board";
+import { EventsToolbar } from "@/components/events/events-toolbar";
+import { getCustomerById } from "@/lib/customers/queries";
+import { EVENT_PHASE } from "@/lib/events/constants";
+import { getEventStatuses, getEvents } from "@/lib/events/queries";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
-export default async function EventsPage() {
-  const [statuses, events] = await Promise.all([
+type EventsPageProps = {
+  searchParams: Promise<{ customerId?: string }>;
+};
+
+export default async function EventsPage({ searchParams }: EventsPageProps) {
+  const { customerId } = await searchParams;
+
+  const [statuses, events, defaultCustomer] = await Promise.all([
     getEventStatuses(),
-    getEvents(),
+    getEvents(customerId ? { customerId } : {}),
+    customerId ? getCustomerById(customerId) : Promise.resolve(null),
   ]);
 
   const activeEvents = events.filter(
     (event) => event.event_statuses.phase !== EVENT_PHASE.TERMINAL,
   );
+
+  const emptyMessage = customerId
+    ? "No hay eventos activos para este cliente."
+    : "Aún no hay eventos activos.";
 
   return (
     <main className="mx-auto flex w-full max-w-[1600px] flex-1 flex-col gap-8 px-6 py-10">
@@ -40,15 +53,24 @@ export default async function EventsPage() {
         </div>
       </div>
 
+      <Suspense fallback={<div className="h-8 max-w-md rounded-md bg-muted" />}>
+        <EventsToolbar
+          customerId={customerId}
+          defaultCustomer={defaultCustomer}
+        />
+      </Suspense>
+
       {activeEvents.length === 0 ? (
         <div className="rounded-lg border border-dashed p-10 text-center">
-          <p className="text-muted-foreground">Aún no hay eventos activos.</p>
-          <Link
-            href="/events/new"
-            className={cn(buttonVariants({ variant: "add" }), "mt-4 inline-flex")}
-          >
-            Crear primer evento
-          </Link>
+          <p className="text-muted-foreground">{emptyMessage}</p>
+          {!customerId && (
+            <Link
+              href="/events/new"
+              className={cn(buttonVariants({ variant: "add" }), "mt-4 inline-flex")}
+            >
+              Crear primer evento
+            </Link>
+          )}
         </div>
       ) : (
         <EventsKanbanBoard statuses={statuses} events={activeEvents} />

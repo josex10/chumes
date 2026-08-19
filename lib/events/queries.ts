@@ -63,12 +63,24 @@ export async function getEventStatuses(): Promise<EventStatus[]> {
   return data ?? [];
 }
 
-export async function getEvents(): Promise<EventWithRelations[]> {
+export type GetEventsOptions = {
+  customerId?: string;
+};
+
+export async function getEvents(
+  options: GetEventsOptions = {},
+): Promise<EventWithRelations[]> {
   const supabase = createAdminSupabaseClient();
-  const { data, error } = await supabase
+  let builder = supabase
     .from("events")
     .select(EVENT_SELECT)
     .order("updated_at", { ascending: false });
+
+  if (options.customerId) {
+    builder = builder.eq("customer_id", options.customerId);
+  }
+
+  const { data, error } = await builder;
 
   if (error) {
     console.error("[getEvents]", error.message);
@@ -76,6 +88,12 @@ export async function getEvents(): Promise<EventWithRelations[]> {
   }
 
   return attachQuotesToEvents((data ?? []) as EventWithRelations[]);
+}
+
+export async function getEventsByCustomerId(
+  customerId: string,
+): Promise<EventWithRelations[]> {
+  return getEvents({ customerId });
 }
 
 export async function getEventsByPhase(
