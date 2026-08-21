@@ -1,110 +1,97 @@
-import Link from "next/link";
-import { CustomersWeekChart } from "@/components/dashboard/customers-week-chart";
-import { QuotesHeroChart } from "@/components/dashboard/quotes-hero-chart";
-import { QuotesWeekChart } from "@/components/dashboard/quotes-week-chart";
-import { buttonVariants } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { CotizacionesTab } from "@/components/dashboard/cotizaciones-tab";
+import {
+  DashboardHeader,
+  type DashboardTab,
+} from "@/components/dashboard/dashboard-header";
+import { FinanzasTab } from "@/components/dashboard/finanzas-tab";
+import { MainTab } from "@/components/dashboard/main-tab";
 import {
   getCustomersCount,
   getCustomersCreatedBetween,
 } from "@/lib/customers/queries";
-import { getDashboardSummary, getWeekBounds } from "@/lib/dashboard/stats";
-import { formatCurrency } from "@/lib/quotes/format";
-import { getQuotes } from "@/lib/quotes/queries";
-import { cn } from "@/lib/utils";
+import {
+  formatWeekRange,
+  getDashboardSummary,
+  getFinanceWeekStats,
+  getLeadsWeekStats,
+  getReservationsWeekStats,
+  getWeekBounds,
+  getWeekKey,
+  parseWeekKey,
+} from "@/lib/dashboard/stats";
+import { getActiveEventSources } from "@/lib/event-sources/queries";
+import {
+  getEventsByEventDateBetween,
+  getEventsCreatedBetween,
+  getEventsReservedBetween,
+} from "@/lib/events/queries";
+import { getQuotesCreatedBetween } from "@/lib/quotes/queries";
 
 export const dynamic = "force-dynamic";
 
-export default async function DashboardPage() {
-  const { start, end } = getWeekBounds();
-  const [quotes, totalCustomers, customersThisWeek] = await Promise.all([
-    getQuotes(),
+type DashboardPageProps = {
+  searchParams: Promise<{ tab?: string; week?: string }>;
+};
+
+function parseTab(tab?: string): DashboardTab {
+  if (tab === "cotizaciones" || tab === "finanzas") return tab;
+  return "main";
+}
+
+export default async function DashboardPage({ searchParams }: DashboardPageProps) {
+  const { tab: tabParam, week: weekParam } = await searchParams;
+  const activeTab = parseTab(tabParam);
+  const reference = weekParam ? parseWeekKey(weekParam) : new Date();
+  const { start, end } = getWeekBounds(reference);
+  const weekKey = getWeekKey(reference);
+  const weekRange = formatWeekRange(start, end);
+
+  const [
+    leadsEvents,
+    reservedEvents,
+    financeEvents,
+    quotes,
+    totalCustomers,
+    customersThisWeek,
+    eventSources,
+  ] = await Promise.all([
+    getEventsCreatedBetween(start, end),
+    getEventsReservedBetween(start, end),
+    getEventsByEventDateBetween(start, end),
+    getQuotesCreatedBetween(start, end),
     getCustomersCount(),
     getCustomersCreatedBetween(start, end),
+    getActiveEventSources(),
   ]);
-  const summary = getDashboardSummary(quotes, customersThisWeek, totalCustomers);
+
+  const leadsStats = getLeadsWeekStats(leadsEvents, eventSources, reference);
+  const reservationsStats = getReservationsWeekStats(reservedEvents, reference);
+  const financeStats = getFinanceWeekStats(financeEvents, reference);
+  const quotesSummary = getDashboardSummary(
+    quotes,
+    customersThisWeek,
+    totalCustomers,
+    reference,
+  );
+  const sourceNames = eventSources.map((s) => s.name);
 
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-10 px-8 py-10">
-      <section className="flex flex-col gap-8">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-medium tracking-tight">Cotizaciones</h1>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Resumen de actividad de la semana
-            </p>
-          </div>
-          <span className="rounded-full border border-border/60 px-3 py-1 text-xs uppercase tracking-widest text-muted-foreground">
-            Esta semana
-          </span>
-        </div>
+      <DashboardHeader activeTab={activeTab} weekKey={weekKey} weekRange={weekRange} />
 
-        <div className="text-center">
-          <p className="text-5xl font-semibold tracking-tight sm:text-6xl">
-            {formatCurrency(summary.quotesAmountThisWeek)}
-          </p>
-          <p className="mt-2 text-sm text-muted-foreground">
-            {summary.quotesThisWeek === 0
-              ? "Aún no hay cotizaciones esta semana"
-              : `${summary.quotesThisWeek} cotización${summary.quotesThisWeek === 1 ? "" : "es"} creada${summary.quotesThisWeek === 1 ? "" : "s"}`}
-          </p>
-        </div>
+      {activeTab === "main" && (
+        <MainTab
+          leadsStats={leadsStats}
+          reservationsStats={reservationsStats}
+          sourceNames={sourceNames}
+        />
+      )}
 
-        <QuotesHeroChart data={summary.quotesDaily} />
-      </section>
+      {activeTab === "cotizaciones" && (
+        <CotizacionesTab summary={quotesSummary} quotes={quotes} />
+      )}
 
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <Card className="ring-1 ring-border/60 shadow-none">
-          <CardContent className="flex flex-col gap-4 pt-0">
-            <p className="text-xs uppercase tracking-widest text-muted-foreground">
-              Cotizaciones esta semana
-            </p>
-            <p className="text-2xl font-semibold tracking-tight">{summary.quotesThisWeek}</p>
-            <QuotesWeekChart data={summary.quotesDaily} />
-          </CardContent>
-        </Card>
-
-        <Card className="ring-1 ring-border/60 shadow-none">
-          <CardContent className="flex flex-col gap-4 pt-0">
-            <p className="text-xs uppercase tracking-widest text-muted-foreground">
-              Monto total semana
-            </p>
-            <p className="text-2xl font-semibold tracking-tight">
-              {formatCurrency(summary.quotesAmountThisWeek)}
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="ring-1 ring-border/60 shadow-none">
-          <CardContent className="flex flex-col gap-4 pt-0">
-            <p className="text-xs uppercase tracking-widest text-muted-foreground">
-              Clientes nuevos
-            </p>
-            <p className="text-2xl font-semibold tracking-tight">
-              {summary.newCustomersThisWeek}
-            </p>
-            <CustomersWeekChart data={summary.customersDaily} />
-          </CardContent>
-        </Card>
-
-        <Card className="ring-1 ring-border/60 shadow-none">
-          <CardContent className="flex flex-col gap-4 pt-0">
-            <p className="text-xs uppercase tracking-widest text-muted-foreground">
-              Total clientes
-            </p>
-            <p className="text-2xl font-semibold tracking-tight">{summary.totalCustomers}</p>
-          </CardContent>
-        </Card>
-      </section>
-
-      <section className="flex flex-wrap gap-3">
-        <Link href="/customers/new" className={cn(buttonVariants({ variant: "add" }))}>
-          Nuevo cliente
-        </Link>
-        <Link href="/quotes/new" className={cn(buttonVariants({ variant: "add" }))}>
-          Nueva cotización
-        </Link>
-      </section>
+      {activeTab === "finanzas" && <FinanzasTab stats={financeStats} />}
     </main>
   );
 }

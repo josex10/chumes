@@ -120,6 +120,26 @@ export async function getQuotes(): Promise<QuoteWithRelations[]> {
   return (data ?? []) as QuoteWithRelations[];
 }
 
+export async function getQuotesCreatedBetween(
+  start: Date,
+  end: Date,
+): Promise<QuoteWithRelations[]> {
+  const supabase = createAdminSupabaseClient();
+  const { data, error } = await supabase
+    .from("quotes")
+    .select("*, customers(*, customer_types(*)), quote_statuses(*)")
+    .gte("created_at", start.toISOString())
+    .lte("created_at", end.toISOString())
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error("[getQuotesCreatedBetween]", error.message);
+    return [];
+  }
+
+  return (data ?? []) as QuoteWithRelations[];
+}
+
 export async function getQuoteById(id: string): Promise<QuoteWithRelations | null> {
   const supabase = createAdminSupabaseClient();
   const { data, error } = await supabase

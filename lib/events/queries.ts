@@ -86,6 +86,80 @@ export type GetEventsOptions = {
   customerId?: string;
 };
 
+export async function getEventsCreatedBetween(
+  start: Date,
+  end: Date,
+): Promise<EventWithRelations[]> {
+  const supabase = createAdminSupabaseClient();
+  const { data, error } = await supabase
+    .from("events")
+    .select(EVENT_SELECT)
+    .gte("created_at", start.toISOString())
+    .lte("created_at", end.toISOString())
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    console.error("[getEventsCreatedBetween]", error.message);
+    return [];
+  }
+
+  return enrichEvents((data ?? []) as EventWithRelations[]);
+}
+
+export async function getEventsReservedBetween(
+  start: Date,
+  end: Date,
+): Promise<EventWithRelations[]> {
+  const supabase = createAdminSupabaseClient();
+  const { data, error } = await supabase
+    .from("events")
+    .select(EVENT_SELECT)
+    .not("reserved_at", "is", null)
+    .gte("reserved_at", start.toISOString())
+    .lte("reserved_at", end.toISOString())
+    .order("reserved_at", { ascending: true });
+
+  if (error) {
+    console.error("[getEventsReservedBetween]", error.message);
+    return [];
+  }
+
+  return enrichEvents((data ?? []) as EventWithRelations[]);
+}
+
+export async function getEventsByEventDateBetween(
+  start: Date,
+  end: Date,
+): Promise<EventWithRelations[]> {
+  const supabase = createAdminSupabaseClient();
+  const startKey = start.toISOString().slice(0, 10);
+  const endKey = end.toISOString().slice(0, 10);
+
+  const { data: operationalStatuses } = await supabase
+    .from("event_statuses")
+    .select("id")
+    .eq("phase", "OPERATIONAL")
+    .eq("is_active", true);
+
+  if (!operationalStatuses?.length) return [];
+
+  const statusIds = operationalStatuses.map((s) => s.id);
+  const { data, error } = await supabase
+    .from("events")
+    .select(EVENT_SELECT)
+    .in("status_id", statusIds)
+    .gte("event_date", startKey)
+    .lte("event_date", endKey)
+    .order("event_date", { ascending: true });
+
+  if (error) {
+    console.error("[getEventsByEventDateBetween]", error.message);
+    return [];
+  }
+
+  return enrichEvents((data ?? []) as EventWithRelations[]);
+}
+
 export async function getEvents(
   options: GetEventsOptions = {},
 ): Promise<EventWithRelations[]> {
