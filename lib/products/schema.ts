@@ -19,6 +19,8 @@ export const productFormSchema = z
     sale_price: optionalNumber,
     replacement_cost: optionalNumber,
     is_active: z.boolean(),
+    is_public: z.boolean(),
+    slug: z.string().trim().optional(),
   })
   .superRefine((values, ctx) => {
     if (values.rental_available && values.rental_price === undefined) {
@@ -56,6 +58,8 @@ export const bundleFormSchema = z
     rental_price: optionalNumber,
     sale_price: optionalNumber,
     is_active: z.boolean(),
+    is_public: z.boolean(),
+    slug: z.string().trim().optional(),
     components: z
       .array(bundleComponentSchema)
       .min(1, "Add at least one component product"),
@@ -111,6 +115,7 @@ export function toProductPayload(values: ProductFormValues) {
     sale_available: values.sale_available,
     minimum_stock: values.minimum_stock ?? null,
     is_active: values.is_active,
+    is_public: values.is_public,
   };
 }
 
@@ -122,6 +127,7 @@ export function toBundlePayload(values: BundleFormValues) {
     rental_available: values.rental_available,
     sale_available: values.sale_available,
     is_active: values.is_active,
+    is_public: values.is_public,
     components: values.components,
   };
 }

@@ -33,7 +33,7 @@ import { cn } from "@/lib/utils";
 
 type QuoteFormProps = {
   customerTypes: CustomerType[];
-  products: QuotableProduct[];
+  products?: QuotableProduct[];
   categories: ProductCategory[];
   lineTypes: QuoteLineType[];
   taxes: Tax[];
@@ -108,7 +108,7 @@ function buildInitialValues(
 
 export function QuoteForm({
   customerTypes,
-  products: initialProducts,
+  products: initialProducts = [],
   categories,
   lineTypes,
   taxes,

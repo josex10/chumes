@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-export default async function HomePage() {
+export default async function IntranetPage() {
   const { userId } = await auth();
 
   if (userId) {
@@ -38,6 +38,12 @@ export default async function HomePage() {
             Registrarse
           </Link>
         </div>
+        <p className="mt-8 text-sm text-muted-foreground">
+          ¿Busca el catálogo público?{" "}
+          <Link href="/" className="text-primary hover:underline">
+            Ir al sitio web
+          </Link>
+        </p>
       </div>
     </main>
   );

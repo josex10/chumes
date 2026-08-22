@@ -24,6 +24,7 @@ import type {
   QuoteLineType,
   Tax,
 } from "@/lib/supabase/types";
+import { getQuotableProductByIdAction } from "@/lib/products/actions";
 import { ProductCombobox } from "@/components/quotes/product-combobox";
 import { QuickProductModal } from "@/components/quotes/quick-product-modal";
 import { Button } from "@/components/ui/button";
@@ -213,10 +214,23 @@ export function QuoteLineItems({
     update(index, line);
   }
 
-  function handleProductChange(index: number, productId: string) {
-    const product = products.find((item) => item.id === productId);
-    if (!product) return;
-    applyProductToLine(index, product);
+  function handleProductChange(
+    index: number,
+    productId: string,
+    product?: QuotableProduct,
+  ) {
+    const resolved = product ?? products.find((item) => item.id === productId);
+    if (resolved) {
+      onProductCreated(resolved);
+      applyProductToLine(index, resolved);
+      return;
+    }
+
+    void getQuotableProductByIdAction(productId).then((fetched) => {
+      if (!fetched) return;
+      onProductCreated(fetched);
+      applyProductToLine(index, fetched);
+    });
   }
 
   function openProductModal(lineIndex: number) {
@@ -298,9 +312,13 @@ export function QuoteLineItems({
                   </TableCell>
                   <TableCell className={cellClass}>
                     <ProductCombobox
-                      products={products}
                       value={items[index]?.product_id || undefined}
-                      onValueChange={(value) => handleProductChange(index, value)}
+                      defaultProduct={products.find(
+                        (product) => product.id === items[index]?.product_id,
+                      )}
+                      onValueChange={(value, product) =>
+                        handleProductChange(index, value, product)
+                      }
                       disabled={disabled}
                       onCreateNew={() => openProductModal(index)}
                     />
@@ -526,9 +544,13 @@ export function QuoteLineItems({
                 )}
               </div>
               <ProductCombobox
-                products={products}
                 value={items[index]?.product_id || undefined}
-                onValueChange={(value) => handleProductChange(index, value)}
+                defaultProduct={products.find(
+                  (product) => product.id === items[index]?.product_id,
+                )}
+                onValueChange={(value, product) =>
+                  handleProductChange(index, value, product)
+                }
                 disabled={disabled}
                 onCreateNew={() => openProductModal(index)}
               />

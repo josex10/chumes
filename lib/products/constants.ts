@@ -22,3 +22,7 @@ export const PRODUCT_PRICE_TYPE = {
   RENTAL: "RENTAL",
   SALE: "SALE",
 } as const;
+
+export const PRODUCT_COMBOBOX_PAGE_SIZE = 10;
+export const PRODUCT_LIST_PAGE_SIZE = 20;
+export const PRODUCT_SEARCH_DEBOUNCE_MS = 300;

@@ -2,7 +2,9 @@ import { notFound } from "next/navigation";
 import { BundleForm } from "@/components/products/bundle-form";
 import { InventoryPanel } from "@/components/products/inventory-panel";
 import { ProductForm } from "@/components/products/product-form";
+import { ProductImagesPanel } from "@/components/products/product-images-panel";
 import { getManualMovementTypes, getMovementsByProduct } from "@/lib/inventory/queries";
+import { getProductImages } from "@/lib/products/image-queries";
 import { PRODUCT_PRICE_TYPE, PRODUCT_TYPE } from "@/lib/products/constants";
 import {
   getBundleAvailability,
@@ -12,7 +14,6 @@ import {
   getProductCosts,
   getProductPrices,
   getProductStock,
-  getSimpleProducts,
 } from "@/lib/products/queries";
 import {
   Card,
@@ -39,13 +40,13 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
   const isBundle = product.product_types.code === PRODUCT_TYPE.BUNDLE;
 
   if (isBundle) {
-    const [categories, componentProducts, components, prices, availability] =
+    const [categories, components, prices, availability, images] =
       await Promise.all([
         getProductCategories(),
-        getSimpleProducts(),
         getBundleComponents(id),
         getProductPrices(id),
         getBundleAvailability(id),
+        getProductImages(id),
       ]);
 
     const rentalPrice = prices.find(
@@ -60,9 +61,11 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
         <BundleForm
           bundleId={id}
           categories={categories}
-          componentProducts={componentProducts.filter(
-            (componentProduct) => componentProduct.id !== id,
-          )}
+          componentProducts={components
+            .map((component) => component.products)
+            .filter((product): product is NonNullable<typeof product> =>
+              Boolean(product),
+            )}
           initialValues={{
             name: product.name,
             description: product.description ?? "",
@@ -72,12 +75,16 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
             rental_price: rentalPrice ? Number(rentalPrice.amount) : undefined,
             sale_price: salePrice ? Number(salePrice.amount) : undefined,
             is_active: product.is_active,
+            is_public: product.is_public,
+            slug: product.slug,
             components: components.map((component) => ({
               component_product_id: component.component_product_id,
               quantity: Number(component.quantity),
             })),
           }}
         />
+
+        <ProductImagesPanel productId={id} images={images} />
 
         <Card className="mx-auto w-full max-w-3xl">
           <CardHeader>
@@ -104,6 +111,7 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
     stock,
     movementTypes,
     movements,
+    images,
   ] = await Promise.all([
     getProductCategories(),
     getProductPrices(id),
@@ -111,6 +119,7 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
     getProductStock(id),
     getManualMovementTypes(),
     getMovementsByProduct(id),
+    getProductImages(id),
   ]);
 
   const rentalPrice = prices.find(
@@ -141,8 +150,12 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
             ? Number(replacementCost.cost)
             : undefined,
           is_active: product.is_active,
+          is_public: product.is_public,
+          slug: product.slug,
         }}
       />
+
+      <ProductImagesPanel productId={id} images={images} />
 
       <InventoryPanel
         productId={id}

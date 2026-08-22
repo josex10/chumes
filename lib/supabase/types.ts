@@ -112,14 +112,27 @@ export type Product = {
   product_type_id: number;
   name: string;
   description: string | null;
+  slug: string;
   rental_available: boolean;
   sale_available: boolean;
   minimum_stock: number | null;
   is_active: boolean;
+  is_public: boolean;
+  sort_order: number;
   created_at: string;
   updated_at: string;
   created_by: string | null;
   updated_by: string | null;
+};
+
+export type ProductImage = {
+  id: string;
+  product_id: string;
+  storage_path: string;
+  alt_text: string | null;
+  sort_order: number;
+  is_primary: boolean;
+  created_at: string;
 };
 
 export type ProductWithRelations = Product & {
@@ -308,6 +321,13 @@ export type QuoteWithRelations = Quote & {
 export type QuotableProduct = ProductWithRelations & {
   rental_price: number | null;
   sale_price: number | null;
+};
+
+export type PublicProduct = ProductWithRelations & {
+  rental_price: number | null;
+  sale_price: number | null;
+  images: ProductImage[];
+  primary_image_url: string | null;
 };
 
 export type EventStatus = {
@@ -559,6 +579,25 @@ export type Database = {
         >;
         Relationships: [];
       };
+      product_images: {
+        Row: ProductImage;
+        Insert: {
+          product_id: string;
+          storage_path: string;
+          alt_text?: string | null;
+          sort_order?: number;
+          is_primary?: boolean;
+        };
+        Update: Partial<Database["public"]["Tables"]["product_images"]["Insert"]>;
+        Relationships: [
+          {
+            foreignKeyName: "product_images_product_id_fkey";
+            columns: ["product_id"];
+            referencedRelation: "products";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       products: {
         Row: Product;
         Insert: {
@@ -567,11 +606,14 @@ export type Database = {
           tracking_type_id: number;
           product_type_id: number;
           name: string;
+          slug: string;
           description?: string | null;
           rental_available?: boolean;
           sale_available?: boolean;
           minimum_stock?: number | null;
           is_active?: boolean;
+          is_public?: boolean;
+          sort_order?: number;
           created_by?: string | null;
           updated_by?: string | null;
         };

@@ -1,5 +1,5 @@
 import { getCustomerById, getCustomerTypes } from "@/lib/customers/queries";
-import { getProductCategories, getQuotableProducts } from "@/lib/products/queries";
+import { getProductCategories } from "@/lib/products/queries";
 import {
   getDefaultTax,
   getDeliveryZones,
@@ -20,7 +20,6 @@ export default async function NewQuotePage({ searchParams }: NewQuotePageProps) 
 
   const [
     customerTypes,
-    products,
     categories,
     lineTypes,
     taxes,
@@ -30,7 +29,6 @@ export default async function NewQuotePage({ searchParams }: NewQuotePageProps) 
     defaultCustomer,
   ] = await Promise.all([
     getCustomerTypes(),
-    getQuotableProducts(),
     getProductCategories(),
     getQuoteLineTypes(),
     getTaxes(),
@@ -44,7 +42,6 @@ export default async function NewQuotePage({ searchParams }: NewQuotePageProps) 
     <main className="mx-auto flex w-full max-w-[1400px] flex-1 flex-col px-6 py-8">
       <QuoteForm
         customerTypes={customerTypes}
-        products={products}
         categories={categories}
         lineTypes={lineTypes}
         taxes={taxes}

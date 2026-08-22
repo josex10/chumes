@@ -10,7 +10,8 @@ import {
   bundleFormSchema,
   type BundleFormValues,
 } from "@/lib/products/schema";
-import type { ProductCategory, ProductWithRelations } from "@/lib/supabase/types";
+import type { Product, ProductCategory } from "@/lib/supabase/types";
+import { ProductCombobox } from "@/components/quotes/product-combobox";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
@@ -33,14 +34,14 @@ import {
 
 type BundleFormProps = {
   categories: ProductCategory[];
-  componentProducts: ProductWithRelations[];
+  componentProducts?: Product[];
   initialValues?: Partial<BundleFormValues>;
   bundleId?: string;
 };
 
 export function BundleForm({
   categories,
-  componentProducts,
+  componentProducts = [],
   initialValues,
   bundleId,
 }: BundleFormProps) {
@@ -60,6 +61,8 @@ export function BundleForm({
       rental_price: initialValues?.rental_price,
       sale_price: initialValues?.sale_price,
       is_active: initialValues?.is_active ?? true,
+      is_public: initialValues?.is_public ?? false,
+      slug: initialValues?.slug ?? "",
       components: initialValues?.components?.length
         ? initialValues.components
         : [{ component_product_id: "", quantity: 1 }],
@@ -247,28 +250,16 @@ export function BundleForm({
                     control={control}
                     name={`components.${index}.component_product_id`}
                     render={({ field: componentField }) => (
-                      <Select
+                      <ProductCombobox
+                        id={`component-${index}`}
+                        source="simple"
+                        excludeId={bundleId}
                         value={componentField.value || undefined}
+                        defaultProduct={componentProducts.find(
+                          (product) => product.id === componentField.value,
+                        )}
                         onValueChange={componentField.onChange}
-                        items={componentProducts.map((product) => ({
-                          value: product.id,
-                          label: `${product.product_number} — ${product.name}`,
-                        }))}
-                      >
-                        <SelectTrigger
-                          id={`component-${index}`}
-                          className="w-full"
-                        >
-                          <SelectValue placeholder="Select component" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {componentProducts.map((product) => (
-                            <SelectItem key={product.id} value={product.id}>
-                              {product.product_number} — {product.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      />
                     )}
                   />
                   {errors.components?.[index]?.component_product_id && (
@@ -324,6 +315,20 @@ export function BundleForm({
             <input type="checkbox" {...register("is_active")} />
             Active bundle
           </label>
+
+          <label className="flex items-center gap-2 text-sm">
+            <input type="checkbox" {...register("is_public")} />
+            Visible in public catalog
+          </label>
+
+          <div className="space-y-2">
+            <Label htmlFor="slug">Public slug</Label>
+            <Input
+              id="slug"
+              placeholder="Auto-generated if empty"
+              {...register("slug")}
+            />
+          </div>
 
           {submitError && (
             <p className="text-sm text-destructive">{submitError}</p>

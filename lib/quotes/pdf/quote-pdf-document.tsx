@@ -123,10 +123,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
     alignItems: "flex-start",
   },
-  colProduct: { width: "20%", paddingRight: 6 },
-  colDescription: { width: "26%", paddingRight: 10 },
-  colType: { width: "11%", paddingRight: 4 },
-  colQty: { width: "8%", textAlign: "right", paddingRight: 4 },
+  colDescription: { width: "57%", paddingRight: 10 },
+  colQty: { width: "10%", textAlign: "center", paddingRight: 8 },
   colUnit: { width: "13%", textAlign: "right", paddingRight: 4 },
   colTax: { width: "10%", textAlign: "right", paddingRight: 4 },
   colTotal: { width: "12%", textAlign: "right" },
@@ -272,12 +270,10 @@ export function QuotePdfDocument({ quote }: QuotePdfDocumentProps) {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Detalle</Text>
           <View style={styles.tableHeader}>
-            <Text style={[styles.headerText, styles.colProduct]}>Producto</Text>
+            <Text style={[styles.headerText, styles.colQty]}>Cantidad</Text>
             <Text style={[styles.headerText, styles.colDescription]}>
               Descripción
             </Text>
-            <Text style={[styles.headerText, styles.colType]}>Tipo</Text>
-            <Text style={[styles.headerText, styles.colQty]}>Cant.</Text>
             <Text style={[styles.headerText, styles.colUnit]}>Precio unit.</Text>
             <Text style={[styles.headerText, styles.colTax]}>Impuesto</Text>
             <Text style={[styles.headerText, styles.colTotal]}>Total</Text>
@@ -285,22 +281,14 @@ export function QuotePdfDocument({ quote }: QuotePdfDocumentProps) {
 
           {items.map((item) => (
             <View key={item.id} style={styles.tableRow}>
-              <View style={styles.colProduct}>
-                <Text style={styles.cellText}>{item.products.name}</Text>
-              </View>
+              <Text style={[styles.cellText, styles.colQty]}>
+                {Number(item.quantity)}
+              </Text>
               <View style={styles.colDescription}>
                 <Text style={styles.cellText}>
                   {item.description || "—"}
                 </Text>
               </View>
-              <View style={styles.colType}>
-                <Text style={styles.cellText}>
-                  {item.quote_line_types.name}
-                </Text>
-              </View>
-              <Text style={[styles.cellText, styles.colQty]}>
-                {Number(item.quantity)}
-              </Text>
               <Text style={[styles.cellText, styles.colUnit]}>
                 {formatPdfCurrency(Number(item.unit_price))}
               </Text>
@@ -314,18 +302,15 @@ export function QuotePdfDocument({ quote }: QuotePdfDocumentProps) {
           ))}
           {quote.delivery_fee != null && Number(quote.delivery_fee) >= 0 ? (
             <View style={styles.tableRow}>
-              <View style={styles.colProduct}>
-                <Text style={styles.cellText}>Transporte</Text>
-              </View>
+              <Text style={[styles.cellText, styles.colQty]}>1</Text>
               <View style={styles.colDescription}>
                 <Text style={styles.cellText}>
-                  {quote.delivery_zones?.name ?? "Entrega"}
+                  Transporte
+                  {quote.delivery_zones?.name
+                    ? ` — ${quote.delivery_zones.name}`
+                    : ""}
                 </Text>
               </View>
-              <View style={styles.colType}>
-                <Text style={styles.cellText}>—</Text>
-              </View>
-              <Text style={[styles.cellText, styles.colQty]}>1</Text>
               <Text style={[styles.cellText, styles.colUnit]}>
                 {formatPdfCurrency(Number(quote.delivery_fee))}
               </Text>

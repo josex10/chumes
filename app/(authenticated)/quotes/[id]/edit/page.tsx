@@ -3,7 +3,10 @@ import { getEventById, getLinkableEventsForCustomer } from "@/lib/events/queries
 import { getStatusPhase } from "@/lib/events/status-transitions";
 import { EVENT_PHASE } from "@/lib/events/constants";
 import { getCustomerTypes } from "@/lib/customers/queries";
-import { getProductCategories, getQuotableProducts } from "@/lib/products/queries";
+import {
+  getProductCategories,
+  getQuotableProductsByIds,
+} from "@/lib/products/queries";
 import {
   getDefaultTax,
   getDeliveryZones,
@@ -27,7 +30,6 @@ export default async function EditQuotePage({
   const [
     quote,
     customerTypes,
-    products,
     categories,
     lineTypes,
     taxes,
@@ -37,7 +39,6 @@ export default async function EditQuotePage({
   ] = await Promise.all([
     getQuoteById(id),
     getCustomerTypes(),
-    getQuotableProducts(),
     getProductCategories(),
     getQuoteLineTypes(),
     getTaxes(),
@@ -49,6 +50,10 @@ export default async function EditQuotePage({
   if (!quote) {
     notFound();
   }
+
+  const products = await getQuotableProductsByIds(
+    quote.quote_items?.map((item) => item.product_id) ?? [],
+  );
 
   let canUnlink = false;
   let linkableEvents: Awaited<ReturnType<typeof getLinkableEventsForCustomer>> = [];

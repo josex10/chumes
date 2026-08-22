@@ -9,7 +9,16 @@ import {
   PRODUCT_TYPE,
 } from "@/lib/products/constants";
 import { generateNextProductNumber } from "@/lib/products/product-number";
-import { getQuotableProductById } from "@/lib/products/queries";
+import { ensureUniqueProductSlug } from "@/lib/products/slug";
+import {
+  getProductById,
+  getQuotableProductById,
+  searchQuotableProductsForCombobox,
+  searchSimpleProductsForCombobox,
+  type SearchProductsParams,
+  type SearchQuotableProductsResult,
+  type SearchSimpleProductsResult,
+} from "@/lib/products/queries";
 import {
   bundleFormSchema,
   productFormSchema,
@@ -257,11 +266,15 @@ export async function createProduct(
     const supabase = createAdminSupabaseClient();
     const productNumber = await generateNextProductNumber();
     const payload = toProductPayload(parsed.data);
+    const slug =
+      parsed.data.slug?.trim() ||
+      (await ensureUniqueProductSlug(parsed.data.name));
 
     const { data, error } = await supabase
       .from("products")
       .insert({
         ...payload,
+        slug,
         product_number: productNumber,
         tracking_type_id: lookupIds.quantityTrackingTypeId,
         product_type_id: lookupIds.simpleTypeId,
@@ -325,11 +338,15 @@ export async function updateProduct(
     const lookupIds = await getLookupIds();
     const supabase = createAdminSupabaseClient();
     const payload = toProductPayload(parsed.data);
+    const slug =
+      parsed.data.slug?.trim() ||
+      (await ensureUniqueProductSlug(parsed.data.name, id));
 
     const { error } = await supabase
       .from("products")
       .update({
         ...payload,
+        slug,
         updated_by: userId,
       })
       .eq("id", id);
@@ -369,6 +386,9 @@ export async function createBundle(
     const supabase = createAdminSupabaseClient();
     const productNumber = await generateNextProductNumber();
     const payload = toBundlePayload(parsed.data);
+    const slug =
+      parsed.data.slug?.trim() ||
+      (await ensureUniqueProductSlug(parsed.data.name));
 
     const { data, error } = await supabase
       .from("products")
@@ -379,6 +399,8 @@ export async function createBundle(
         rental_available: payload.rental_available,
         sale_available: payload.sale_available,
         is_active: payload.is_active,
+        is_public: payload.is_public,
+        slug,
         minimum_stock: null,
         product_number: productNumber,
         tracking_type_id: lookupIds.quantityTrackingTypeId,
@@ -423,6 +445,9 @@ export async function updateBundle(
     const lookupIds = await getLookupIds();
     const supabase = createAdminSupabaseClient();
     const payload = toBundlePayload(parsed.data);
+    const slug =
+      parsed.data.slug?.trim() ||
+      (await ensureUniqueProductSlug(parsed.data.name, id));
 
     const { error } = await supabase
       .from("products")
@@ -433,6 +458,8 @@ export async function updateBundle(
         rental_available: payload.rental_available,
         sale_available: payload.sale_available,
         is_active: payload.is_active,
+        is_public: payload.is_public,
+        slug,
         updated_by: userId,
       })
       .eq("id", id);
@@ -452,4 +479,24 @@ export async function updateBundle(
     console.error("[updateBundle]", error);
     return { success: false, error: "Could not update bundle." };
   }
+}
+
+export async function searchQuotableProductsAction(
+  params: SearchProductsParams,
+): Promise<SearchQuotableProductsResult> {
+  return searchQuotableProductsForCombobox(params);
+}
+
+export async function searchSimpleProductsAction(
+  params: SearchProductsParams,
+): Promise<SearchSimpleProductsResult> {
+  return searchSimpleProductsForCombobox(params);
+}
+
+export async function getQuotableProductByIdAction(id: string) {
+  return getQuotableProductById(id);
+}
+
+export async function getProductByIdAction(id: string) {
+  return getProductById(id);
 }

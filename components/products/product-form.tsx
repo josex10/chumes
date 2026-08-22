@@ -60,6 +60,8 @@ export function ProductForm({
       sale_price: initialValues?.sale_price,
       replacement_cost: initialValues?.replacement_cost,
       is_active: initialValues?.is_active ?? true,
+      is_public: initialValues?.is_public ?? false,
+      slug: initialValues?.slug ?? "",
     },
   });
 
@@ -251,6 +253,23 @@ export function ProductForm({
             <input type="checkbox" {...register("is_active")} />
             Active product
           </label>
+
+          <label className="flex items-center gap-2 text-sm">
+            <input type="checkbox" {...register("is_public")} />
+            Visible in public catalog
+          </label>
+
+          <div className="space-y-2">
+            <Label htmlFor="slug">Public slug</Label>
+            <Input
+              id="slug"
+              placeholder="Auto-generated if empty"
+              {...register("slug")}
+            />
+            <p className="text-xs text-muted-foreground">
+              Used in the public URL, for example /catalogo/my-product.
+            </p>
+          </div>
 
           {errors.rental_available && (
             <p className="text-sm text-destructive">
