@@ -21,10 +21,10 @@ export default async function PublicHomePage() {
         eyebrow="Costa Rica"
         title={CHUMES_STOREFRONT.tagline}
         description={CHUMES_STOREFRONT.description}
-        primaryHref="/catalogo"
-        primaryLabel="Ver catálogo"
-        secondaryHref="/cotizar"
-        secondaryLabel="Solicitar cotización"
+        primaryHref="/armar-mesa"
+        primaryLabel="Armar tu mesa"
+        secondaryHref="/catalogo"
+        secondaryLabel="Ver catálogo"
       />
 
       <section className="mx-auto w-full max-w-6xl px-6 pb-8">

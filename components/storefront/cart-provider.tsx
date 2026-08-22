@@ -31,6 +31,9 @@ type CartContextValue = {
   items: CartItem[];
   itemCount: number;
   addItem: (item: Omit<CartItem, "quantity"> & { quantity?: number }) => void;
+  addItems: (
+    items: Array<Omit<CartItem, "quantity"> & { quantity?: number }>,
+  ) => void;
   updateQuantity: (
     productId: string,
     lineType: CartLineType,
@@ -43,6 +46,35 @@ type CartContextValue = {
 const STORAGE_KEY = "chumes-storefront-cart";
 
 const CartContext = createContext<CartContextValue | null>(null);
+
+function mergeCartItem(
+  current: CartItem[],
+  item: Omit<CartItem, "quantity"> & { quantity?: number },
+): CartItem[] {
+  const existingIndex = current.findIndex(
+    (entry) =>
+      entry.productId === item.productId && entry.lineType === item.lineType,
+  );
+
+  if (existingIndex === -1) {
+    return [
+      ...current,
+      {
+        ...item,
+        quantity: item.quantity ?? 1,
+      },
+    ];
+  }
+
+  return current.map((entry, index) =>
+    index === existingIndex
+      ? {
+          ...entry,
+          quantity: entry.quantity + (item.quantity ?? 1),
+        }
+      : entry,
+  );
+}
 
 function readStoredItems(): CartItem[] {
   if (typeof window === "undefined") {
@@ -81,32 +113,16 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const addItem = useCallback(
     (item: Omit<CartItem, "quantity"> & { quantity?: number }) => {
-      setItems((current) => {
-        const existingIndex = current.findIndex(
-          (entry) =>
-            entry.productId === item.productId &&
-            entry.lineType === item.lineType,
-        );
+      setItems((current) => mergeCartItem(current, item));
+    },
+    [],
+  );
 
-        if (existingIndex === -1) {
-          return [
-            ...current,
-            {
-              ...item,
-              quantity: item.quantity ?? 1,
-            },
-          ];
-        }
-
-        return current.map((entry, index) =>
-          index === existingIndex
-            ? {
-                ...entry,
-                quantity: entry.quantity + (item.quantity ?? 1),
-              }
-            : entry,
-        );
-      });
+  const addItems = useCallback(
+    (incoming: Array<Omit<CartItem, "quantity"> & { quantity?: number }>) => {
+      setItems((current) =>
+        incoming.reduce((next, item) => mergeCartItem(next, item), current),
+      );
     },
     [],
   );
@@ -152,11 +168,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
       items,
       itemCount: items.reduce((total, item) => total + item.quantity, 0),
       addItem,
+      addItems,
       updateQuantity,
       removeItem,
       clearCart,
     }),
-    [items, addItem, updateQuantity, removeItem, clearCart],
+    [items, addItem, addItems, updateQuantity, removeItem, clearCart],
   );
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;

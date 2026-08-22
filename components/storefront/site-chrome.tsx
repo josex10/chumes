@@ -5,6 +5,7 @@ import { CHUMES_STOREFRONT, getWhatsAppUrl } from "@/lib/storefront/company";
 
 const navItems = [
   { href: "/catalogo", label: "Catálogo" },
+  { href: "/armar-mesa", label: "Armar tu mesa" },
   { href: "/cotizar", label: "Cotizar" },
   { href: "/contacto", label: "Contacto" },
 ];
@@ -78,6 +79,9 @@ export function StorefrontFooter() {
         <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
           <Link href="/catalogo" className="hover:text-foreground">
             Catálogo
+          </Link>
+          <Link href="/armar-mesa" className="hover:text-foreground">
+            Armar tu mesa
           </Link>
           <Link href="/cotizar" className="hover:text-foreground">
             Cotizar

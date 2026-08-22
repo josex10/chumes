@@ -135,6 +135,20 @@ export type ProductImage = {
   created_at: string;
 };
 
+export type ProductSetupOption = {
+  id: string;
+  slot: "table" | "chair" | "linen" | "overlay" | "cover";
+  variant_key: string;
+  label: string;
+  preview_color: string;
+  finish: "matte" | "satin";
+  suggested_slug: string | null;
+  product_id: string | null;
+  sort_order: number;
+  is_active: boolean;
+  created_at: string;
+};
+
 export type ProductWithRelations = Product & {
   product_categories: ProductCategory;
   product_types: ProductType;
@@ -592,6 +606,29 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "product_images_product_id_fkey";
+            columns: ["product_id"];
+            referencedRelation: "products";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      product_setup_options: {
+        Row: ProductSetupOption;
+        Insert: {
+          slot: ProductSetupOption["slot"];
+          variant_key: string;
+          label: string;
+          preview_color: string;
+          finish?: ProductSetupOption["finish"];
+          suggested_slug?: string | null;
+          product_id?: string | null;
+          sort_order?: number;
+          is_active?: boolean;
+        };
+        Update: Partial<Database["public"]["Tables"]["product_setup_options"]["Insert"]>;
+        Relationships: [
+          {
+            foreignKeyName: "product_setup_options_product_id_fkey";
             columns: ["product_id"];
             referencedRelation: "products";
             referencedColumns: ["id"];

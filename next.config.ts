@@ -5,6 +5,7 @@ const supabaseHostname = process.env.NEXT_PUBLIC_SUPABASE_URL
   : undefined;
 
 const nextConfig: NextConfig = {
+  transpilePackages: ["three"],
   images: {
     remotePatterns: supabaseHostname
       ? [
