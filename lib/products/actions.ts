@@ -256,7 +256,7 @@ export async function createProduct(
   if (!parsed.success) {
     return {
       success: false,
-      error: parsed.error.issues[0]?.message ?? "Invalid form data",
+      error: parsed.error.issues[0]?.message ?? "Datos del formulario inválidos",
     };
   }
 
@@ -286,7 +286,7 @@ export async function createProduct(
 
     if (error || !data) {
       console.error("[createProduct]", error?.message);
-      return { success: false, error: "Could not create product." };
+      return { success: false, error: "No se pudo crear el producto." };
     }
 
     await upsertCurrentPrices(data.id, parsed.data, lookupIds, userId);
@@ -300,7 +300,7 @@ export async function createProduct(
     return { success: true, productId: data.id };
   } catch (error) {
     console.error("[createProduct]", error);
-    return { success: false, error: "Could not create product." };
+    return { success: false, error: "No se pudo crear el producto." };
   }
 }
 
@@ -314,7 +314,7 @@ export async function createProductAndFetch(
 
   const product = await getQuotableProductById(result.productId);
   if (!product) {
-    return { success: false, error: "Product created but could not be loaded." };
+    return { success: false, error: "El producto se creó pero no se pudo cargar." };
   }
 
   return { success: true, productId: result.productId, product };
@@ -329,7 +329,7 @@ export async function updateProduct(
   if (!parsed.success) {
     return {
       success: false,
-      error: parsed.error.issues[0]?.message ?? "Invalid form data",
+      error: parsed.error.issues[0]?.message ?? "Datos del formulario inválidos",
     };
   }
 
@@ -353,7 +353,7 @@ export async function updateProduct(
 
     if (error) {
       console.error("[updateProduct]", error.message);
-      return { success: false, error: "Could not update product." };
+      return { success: false, error: "No se pudo actualizar el producto." };
     }
 
     await upsertCurrentPrices(id, parsed.data, lookupIds, userId);
@@ -364,7 +364,7 @@ export async function updateProduct(
     return { success: true, productId: id };
   } catch (error) {
     console.error("[updateProduct]", error);
-    return { success: false, error: "Could not update product." };
+    return { success: false, error: "No se pudo actualizar el producto." };
   }
 }
 
@@ -376,7 +376,7 @@ export async function createBundle(
   if (!parsed.success) {
     return {
       success: false,
-      error: parsed.error.issues[0]?.message ?? "Invalid form data",
+      error: parsed.error.issues[0]?.message ?? "Datos del formulario inválidos",
     };
   }
 
@@ -413,7 +413,7 @@ export async function createBundle(
 
     if (error || !data) {
       console.error("[createBundle]", error?.message);
-      return { success: false, error: "Could not create bundle." };
+      return { success: false, error: "No se pudo crear el paquete." };
     }
 
     await replaceBundleItems(data.id, payload.components, userId);
@@ -423,7 +423,7 @@ export async function createBundle(
     return { success: true, productId: data.id };
   } catch (error) {
     console.error("[createBundle]", error);
-    return { success: false, error: "Could not create bundle." };
+    return { success: false, error: "No se pudo crear el paquete." };
   }
 }
 
@@ -436,7 +436,7 @@ export async function updateBundle(
   if (!parsed.success) {
     return {
       success: false,
-      error: parsed.error.issues[0]?.message ?? "Invalid form data",
+      error: parsed.error.issues[0]?.message ?? "Datos del formulario inválidos",
     };
   }
 
@@ -466,7 +466,7 @@ export async function updateBundle(
 
     if (error) {
       console.error("[updateBundle]", error.message);
-      return { success: false, error: "Could not update bundle." };
+      return { success: false, error: "No se pudo actualizar el paquete." };
     }
 
     await replaceBundleItems(id, payload.components, userId);
@@ -477,7 +477,7 @@ export async function updateBundle(
     return { success: true, productId: id };
   } catch (error) {
     console.error("[updateBundle]", error);
-    return { success: false, error: "Could not update bundle." };
+    return { success: false, error: "No se pudo actualizar el paquete." };
   }
 }
 
@@ -499,4 +499,356 @@ export async function getQuotableProductByIdAction(id: string) {
 
 export async function getProductByIdAction(id: string) {
   return getProductById(id);
+}
+
+type ToggleResult =
+  | { success: true; is_active?: boolean; is_public?: boolean }
+  | { success: false; error: string };
+
+type MutationResult =
+  | { success: true; productId?: string }
+  | { success: false; error: string };
+
+export async function toggleProductActive(productId: string): Promise<ToggleResult> {
+  try {
+    const { userId } = await auth();
+    const product = await getProductById(productId);
+    if (!product) {
+      return { success: false, error: "Producto no encontrado." };
+    }
+
+    const is_active = !product.is_active;
+    const supabase = createAdminSupabaseClient();
+    const { error } = await supabase
+      .from("products")
+      .update({ is_active, updated_by: userId })
+      .eq("id", productId);
+
+    if (error) {
+      console.error("[toggleProductActive]", error.message);
+      return { success: false, error: "No se pudo actualizar el estado del producto." };
+    }
+
+    revalidatePath("/products");
+    revalidatePath(`/products/${productId}/edit`);
+    revalidatePath("/catalogo");
+    return { success: true, is_active };
+  } catch (error) {
+    console.error("[toggleProductActive]", error);
+    return { success: false, error: "No se pudo actualizar el estado del producto." };
+  }
+}
+
+export async function toggleProductPublic(productId: string): Promise<ToggleResult> {
+  try {
+    const { userId } = await auth();
+    const product = await getProductById(productId);
+    if (!product) {
+      return { success: false, error: "Producto no encontrado." };
+    }
+
+    const is_public = !product.is_public;
+    const supabase = createAdminSupabaseClient();
+    const { error } = await supabase
+      .from("products")
+      .update({ is_public, updated_by: userId })
+      .eq("id", productId);
+
+    if (error) {
+      console.error("[toggleProductPublic]", error.message);
+      return { success: false, error: "No se pudo actualizar la visibilidad en el catálogo." };
+    }
+
+    revalidatePath("/products");
+    revalidatePath(`/products/${productId}/edit`);
+    revalidatePath("/catalogo");
+    revalidatePath("/");
+    return { success: true, is_public };
+  } catch (error) {
+    console.error("[toggleProductPublic]", error);
+    return { success: false, error: "No se pudo actualizar la visibilidad en el catálogo." };
+  }
+}
+
+export async function updateProductGeneral(
+  id: string,
+  values: import("@/lib/products/schema").ProductGeneralValues,
+): Promise<MutationResult> {
+  const parsed = (await import("@/lib/products/schema")).productGeneralSchema.safeParse(values);
+  if (!parsed.success) {
+    return {
+      success: false,
+      error: parsed.error.issues[0]?.message ?? "Datos del formulario inválidos",
+    };
+  }
+
+  try {
+    const { userId } = await auth();
+    const supabase = createAdminSupabaseClient();
+
+    const { error } = await supabase
+      .from("products")
+      .update({
+        name: parsed.data.name.trim(),
+        description: parsed.data.description?.trim() || null,
+        category_id: parsed.data.category_id,
+        updated_by: userId,
+      })
+      .eq("id", id);
+
+    if (error) {
+      console.error("[updateProductGeneral]", error.message);
+      return { success: false, error: "No se pudo actualizar el producto." };
+    }
+
+    revalidatePath("/products");
+    revalidatePath(`/products/${id}/edit`);
+    revalidatePath("/catalogo");
+    return { success: true, productId: id };
+  } catch (error) {
+    console.error("[updateProductGeneral]", error);
+    return { success: false, error: "No se pudo actualizar el producto." };
+  }
+}
+
+export async function updateProductPricing(
+  id: string,
+  values: import("@/lib/products/schema").ProductPricingValues,
+): Promise<MutationResult> {
+  const { productPricingSchema } = await import("@/lib/products/schema");
+  const parsed = productPricingSchema.safeParse(values);
+  if (!parsed.success) {
+    return {
+      success: false,
+      error: parsed.error.issues[0]?.message ?? "Datos del formulario inválidos",
+    };
+  }
+
+  try {
+    const { userId } = await auth();
+    const lookupIds = await getLookupIds();
+    const supabase = createAdminSupabaseClient();
+
+    const { error } = await supabase
+      .from("products")
+      .update({
+        rental_available: parsed.data.rental_available,
+        sale_available: parsed.data.sale_available,
+        updated_by: userId,
+      })
+      .eq("id", id);
+
+    if (error) {
+      console.error("[updateProductPricing]", error.message);
+      return { success: false, error: "No se pudieron actualizar los precios." };
+    }
+
+    await upsertCurrentPrices(id, parsed.data, lookupIds, userId);
+    await upsertReplacementCost(id, parsed.data.replacement_cost, userId);
+
+    revalidatePath("/products");
+    revalidatePath(`/products/${id}/edit`);
+    revalidatePath("/catalogo");
+    return { success: true, productId: id };
+  } catch (error) {
+    console.error("[updateProductPricing]", error);
+    return { success: false, error: "No se pudieron actualizar los precios." };
+  }
+}
+
+export async function updateProductCatalog(
+  id: string,
+  values: import("@/lib/products/schema").ProductCatalogValues,
+): Promise<MutationResult> {
+  const { productCatalogSchema } = await import("@/lib/products/schema");
+  const parsed = productCatalogSchema.safeParse(values);
+  if (!parsed.success) {
+    return {
+      success: false,
+      error: parsed.error.issues[0]?.message ?? "Datos del formulario inválidos",
+    };
+  }
+
+  try {
+    const { userId } = await auth();
+    const product = await getProductById(id);
+    if (!product) {
+      return { success: false, error: "Producto no encontrado." };
+    }
+
+    const slug =
+      parsed.data.slug?.trim() ||
+      (await ensureUniqueProductSlug(product.name, id));
+
+    const supabase = createAdminSupabaseClient();
+    const { error } = await supabase
+      .from("products")
+      .update({ slug, updated_by: userId })
+      .eq("id", id);
+
+    if (error) {
+      console.error("[updateProductCatalog]", error.message);
+      return { success: false, error: "No se pudo actualizar la configuración del catálogo." };
+    }
+
+    revalidatePath("/products");
+    revalidatePath(`/products/${id}/edit`);
+    revalidatePath("/catalogo");
+    return { success: true, productId: id };
+  } catch (error) {
+    console.error("[updateProductCatalog]", error);
+    return { success: false, error: "No se pudo actualizar la configuración del catálogo." };
+  }
+}
+
+export async function updateProductInventorySettings(
+  id: string,
+  values: import("@/lib/products/schema").ProductInventorySettingsValues,
+): Promise<MutationResult> {
+  const { productInventorySettingsSchema } = await import("@/lib/products/schema");
+  const parsed = productInventorySettingsSchema.safeParse(values);
+  if (!parsed.success) {
+    return {
+      success: false,
+      error: parsed.error.issues[0]?.message ?? "Datos del formulario inválidos",
+    };
+  }
+
+  try {
+    const { userId } = await auth();
+    const supabase = createAdminSupabaseClient();
+    const { error } = await supabase
+      .from("products")
+      .update({
+        minimum_stock: parsed.data.minimum_stock ?? null,
+        updated_by: userId,
+      })
+      .eq("id", id);
+
+    if (error) {
+      console.error("[updateProductInventorySettings]", error.message);
+      return { success: false, error: "No se pudo actualizar la configuración de inventario." };
+    }
+
+    revalidatePath(`/products/${id}/edit`);
+    return { success: true, productId: id };
+  } catch (error) {
+    console.error("[updateProductInventorySettings]", error);
+    return { success: false, error: "No se pudo actualizar la configuración de inventario." };
+  }
+}
+
+export async function updateBundleGeneral(
+  id: string,
+  values: import("@/lib/products/schema").BundleGeneralValues,
+): Promise<MutationResult> {
+  const { bundleGeneralSchema } = await import("@/lib/products/schema");
+  const parsed = bundleGeneralSchema.safeParse(values);
+  if (!parsed.success) {
+    return {
+      success: false,
+      error: parsed.error.issues[0]?.message ?? "Datos del formulario inválidos",
+    };
+  }
+
+  try {
+    const { userId } = await auth();
+    const supabase = createAdminSupabaseClient();
+
+    const { error } = await supabase
+      .from("products")
+      .update({
+        name: parsed.data.name.trim(),
+        description: parsed.data.description?.trim() || null,
+        category_id: parsed.data.category_id,
+        updated_by: userId,
+      })
+      .eq("id", id);
+
+    if (error) {
+      console.error("[updateBundleGeneral]", error.message);
+      return { success: false, error: "No se pudo actualizar el paquete." };
+    }
+
+    await replaceBundleItems(id, parsed.data.components, userId);
+
+    revalidatePath("/products");
+    revalidatePath(`/products/${id}/edit`);
+    revalidatePath("/catalogo");
+    return { success: true, productId: id };
+  } catch (error) {
+    console.error("[updateBundleGeneral]", error);
+    return { success: false, error: "No se pudo actualizar el paquete." };
+  }
+}
+
+export async function updateBundlePricing(
+  id: string,
+  values: import("@/lib/products/schema").ProductPricingValues,
+): Promise<MutationResult> {
+  return updateProductPricing(id, values);
+}
+
+export async function updateProductDetails(
+  id: string,
+  values: import("@/lib/products/schema").ProductDetailsValues,
+): Promise<MutationResult> {
+  const { productDetailsSchema } = await import("@/lib/products/schema");
+  const parsed = productDetailsSchema.safeParse(values);
+  if (!parsed.success) {
+    return {
+      success: false,
+      error: parsed.error.issues[0]?.message ?? "Datos del formulario inválidos",
+    };
+  }
+
+  const generalResult = await updateProductGeneral(id, {
+    name: parsed.data.name,
+    description: parsed.data.description,
+    category_id: parsed.data.category_id,
+  });
+
+  if (!generalResult.success) {
+    return generalResult;
+  }
+
+  return updateProductPricing(id, {
+    rental_available: parsed.data.rental_available,
+    sale_available: parsed.data.sale_available,
+    rental_price: parsed.data.rental_price,
+    sale_price: parsed.data.sale_price,
+    replacement_cost: parsed.data.replacement_cost,
+  });
+}
+
+export async function updateBundleDetails(
+  id: string,
+  values: import("@/lib/products/schema").BundleDetailsValues,
+): Promise<MutationResult> {
+  const { bundleDetailsSchema } = await import("@/lib/products/schema");
+  const parsed = bundleDetailsSchema.safeParse(values);
+  if (!parsed.success) {
+    return {
+      success: false,
+      error: parsed.error.issues[0]?.message ?? "Datos del formulario inválidos",
+    };
+  }
+
+  const generalResult = await updateBundleGeneral(id, {
+    name: parsed.data.name,
+    description: parsed.data.description,
+    category_id: parsed.data.category_id,
+    components: parsed.data.components,
+  });
+
+  if (!generalResult.success) {
+    return generalResult;
+  }
+
+  return updateProductPricing(id, {
+    rental_available: parsed.data.rental_available,
+    sale_available: parsed.data.sale_available,
+    rental_price: parsed.data.rental_price,
+    sale_price: parsed.data.sale_price,
+  });
 }

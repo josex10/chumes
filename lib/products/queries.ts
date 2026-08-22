@@ -18,10 +18,13 @@ import type {
 
 export type ProductListItem = ProductWithRelations & {
   stock: number | null;
+  rental_price: number | null;
+  sale_price: number | null;
 };
 
 export type SearchProductsParams = {
   query?: string;
+  categoryId?: number;
   page?: number;
   pageSize?: number;
   excludeId?: string;
@@ -93,7 +96,12 @@ async function getStockByProductId(
 }
 
 async function withStock(
-  products: ProductWithRelations[],
+  products: Array<
+    ProductWithRelations & {
+      rental_price?: number | null;
+      sale_price?: number | null;
+    }
+  >,
 ): Promise<ProductListItem[]> {
   if (products.length === 0) {
     return [];
@@ -131,10 +139,16 @@ async function withStock(
   const stockByProductId = await getStockByProductId(stockIds);
 
   return products.map((product) => {
+    const prices = {
+      rental_price: product.rental_price ?? null,
+      sale_price: product.sale_price ?? null,
+    };
+
     if (product.product_types.code === PRODUCT_TYPE.BUNDLE) {
       const components = bundleItemsByProductId.get(product.id) ?? [];
       return {
         ...product,
+        ...prices,
         stock: computeBundleAvailability(
           components.map((component) => ({
             component_product_id: component.component_product_id,
@@ -147,14 +161,15 @@ async function withStock(
 
     return {
       ...product,
+      ...prices,
       stock: stockByProductId.get(product.id) ?? 0,
     };
   });
 }
 
-async function attachPricesToProducts(
+async function attachPricesToListItems(
   products: ProductWithRelations[],
-): Promise<QuotableProduct[]> {
+): Promise<Array<ProductWithRelations & { rental_price: number | null; sale_price: number | null }>> {
   if (products.length === 0) {
     return [];
   }
@@ -168,7 +183,7 @@ async function attachPricesToProducts(
     .is("effective_to", null);
 
   if (pricesError) {
-    console.error("[attachPricesToProducts]", pricesError.message);
+    console.error("[attachPricesToListItems]", pricesError.message);
   }
 
   const pricesByProduct = new Map<string, { rental: number | null; sale: number | null }>();
@@ -192,6 +207,17 @@ async function attachPricesToProducts(
       sale_price: productPrices.sale,
     };
   });
+}
+
+async function attachPricesToProducts(
+  products: ProductWithRelations[],
+): Promise<QuotableProduct[]> {
+  const withPrices = await attachPricesToListItems(products);
+  return withPrices.map((product) => ({
+    ...product,
+    rental_price: product.rental_price,
+    sale_price: product.sale_price,
+  }));
 }
 
 export async function getProductCategories(): Promise<ProductCategory[]> {
@@ -260,6 +286,7 @@ export async function getProductPriceTypes(): Promise<ProductPriceType[]> {
 
 export async function searchProducts({
   query = "",
+  categoryId,
   page = 1,
   pageSize = PRODUCT_LIST_PAGE_SIZE,
 }: SearchProductsParams = {}): Promise<SearchProductsResult> {
@@ -281,6 +308,10 @@ export async function searchProducts({
     builder = builder.or(searchFilter);
   }
 
+  if (categoryId) {
+    builder = builder.eq("category_id", categoryId);
+  }
+
   const { data, error, count } = await builder.range(
     offset,
     offset + normalizedPageSize - 1,
@@ -298,7 +329,10 @@ export async function searchProducts({
   }
 
   const total = count ?? 0;
-  const products = await withStock((data ?? []) as ProductWithRelations[]);
+  const withPrices = await attachPricesToListItems(
+    (data ?? []) as ProductWithRelations[],
+  );
+  const products = await withStock(withPrices);
 
   return {
     products,

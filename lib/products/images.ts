@@ -1,11 +1,18 @@
-import { getSupabaseEnv } from "@/lib/supabase/env";
 import type { ProductImage } from "@/lib/supabase/types";
 
 const BUCKET = "product-images";
 
+// Static access so Next.js inlines this in client bundles.
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
+
 export function getProductImagePublicUrl(storagePath: string): string {
-  const { url } = getSupabaseEnv();
-  return `${url}/storage/v1/object/public/${BUCKET}/${storagePath}`;
+  if (!SUPABASE_URL) {
+    throw new Error(
+      "Missing required environment variable: NEXT_PUBLIC_SUPABASE_URL",
+    );
+  }
+
+  return `${SUPABASE_URL}/storage/v1/object/public/${BUCKET}/${storagePath}`;
 }
 
 export function getPrimaryImageUrl(images: ProductImage[]): string | null {

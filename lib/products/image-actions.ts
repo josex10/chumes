@@ -7,9 +7,14 @@ import {
   buildProductImageStoragePath,
   PRODUCT_IMAGES_BUCKET,
 } from "@/lib/products/images";
+import type { ProductImage } from "@/lib/supabase/types";
 
-type ActionResult =
-  | { success: true; imageId?: string }
+type UploadResult =
+  | { success: true; image: ProductImage }
+  | { success: false; error: string };
+
+type MutationResult =
+  | { success: true }
   | { success: false; error: string };
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
@@ -23,7 +28,7 @@ const ALLOWED_TYPES = new Set([
 export async function uploadProductImage(
   productId: string,
   formData: FormData,
-): Promise<ActionResult> {
+): Promise<UploadResult> {
   const { userId } = await auth();
   if (!userId) {
     return { success: false, error: "No autorizado." };
@@ -75,7 +80,7 @@ export async function uploadProductImage(
         sort_order: existingImages?.length ?? 0,
         is_primary: isPrimary,
       })
-      .select("id")
+      .select("*")
       .single();
 
     if (error || !data) {
@@ -84,9 +89,8 @@ export async function uploadProductImage(
       return { success: false, error: "No se pudo registrar la imagen." };
     }
 
-    revalidatePath(`/products/${productId}/edit`);
     revalidatePath("/catalogo");
-    return { success: true, imageId: data.id };
+    return { success: true, image: data as ProductImage };
   } catch (error) {
     console.error("[uploadProductImage]", error);
     return { success: false, error: "No se pudo subir la imagen." };
@@ -96,7 +100,7 @@ export async function uploadProductImage(
 export async function deleteProductImage(
   imageId: string,
   productId: string,
-): Promise<ActionResult> {
+): Promise<MutationResult> {
   const { userId } = await auth();
   if (!userId) {
     return { success: false, error: "No autorizado." };
@@ -158,7 +162,7 @@ export async function deleteProductImage(
 export async function setPrimaryProductImage(
   imageId: string,
   productId: string,
-): Promise<ActionResult> {
+): Promise<MutationResult> {
   const { userId } = await auth();
   if (!userId) {
     return { success: false, error: "No autorizado." };

@@ -46,6 +46,7 @@ type InventoryPanelProps = {
   minimumStock: number | null;
   movementTypes: InventoryMovementType[];
   movements: InventoryMovementWithRelations[];
+  hideOverview?: boolean;
 };
 
 function formatQuantity(value: number) {
@@ -58,6 +59,7 @@ export function InventoryPanel({
   minimumStock,
   movementTypes,
   movements,
+  hideOverview = false,
 }: InventoryPanelProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -109,27 +111,29 @@ export function InventoryPanel({
 
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Inventory</CardTitle>
-          <CardDescription>
-            Stock is calculated from recorded movements. Direct stock edits are
-            not allowed.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          <p className="text-3xl font-semibold">{formatQuantity(stock)}</p>
-          <p className="text-sm text-muted-foreground">
-            Current balance
-            {minimumStock !== null ? ` · Minimum stock: ${minimumStock}` : ""}
-          </p>
-          {belowMinimum && (
-            <p className="text-sm text-destructive">
-              Stock is below the configured minimum.
+      {!hideOverview ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Inventory</CardTitle>
+            <CardDescription>
+              Stock is calculated from recorded movements. Direct stock edits are
+              not allowed.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <p className="text-3xl font-semibold">{formatQuantity(stock)}</p>
+            <p className="text-sm text-muted-foreground">
+              Current balance
+              {minimumStock !== null ? ` · Minimum stock: ${minimumStock}` : ""}
             </p>
-          )}
-        </CardContent>
-      </Card>
+            {belowMinimum && (
+              <p className="text-sm text-destructive">
+                Stock is below the configured minimum.
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      ) : null}
 
       <Card>
         <CardHeader>

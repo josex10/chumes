@@ -15,20 +15,18 @@ import { Label } from "@/components/ui/label";
 type ProductImagesPanelProps = {
   productId: string;
   images: ProductImage[];
+  embedded?: boolean;
 };
 
 export function ProductImagesPanel({
   productId,
   images: initialImages,
+  embedded = false,
 }: ProductImagesPanelProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [images, setImages] = useState(initialImages);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
-
-  function refreshFromServer() {
-    window.location.reload();
-  }
 
   function handleUpload(file: File) {
     setError(null);
@@ -42,7 +40,7 @@ export function ProductImagesPanel({
         return;
       }
 
-      refreshFromServer();
+      setImages((current) => [...current, result.image]);
     });
   }
 
@@ -75,22 +73,26 @@ export function ProductImagesPanel({
     });
   }
 
-  return (
-    <div className="mx-auto w-full max-w-2xl rounded-xl border bg-card p-6">
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <h2 className="text-lg font-semibold">Imágenes del catálogo</h2>
-          <p className="text-sm text-muted-foreground">
-            Estas fotos se muestran en el sitio público.
-          </p>
-        </div>
+  const content = (
+    <>
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        {!embedded ? (
+          <div>
+            <h2 className="text-lg font-semibold">Imágenes del catálogo</h2>
+            <p className="text-sm text-muted-foreground">
+              Estas fotos aparecen en el sitio web público.
+            </p>
+          </div>
+        ) : (
+          <div />
+        )}
         <Button
           type="button"
           variant="outline"
           disabled={isPending}
           onClick={() => inputRef.current?.click()}
         >
-          Subir imagen
+          {isPending ? "Subiendo..." : "Subir imagen"}
         </Button>
       </div>
 
@@ -108,14 +110,14 @@ export function ProductImagesPanel({
         }}
       />
 
-      {error ? <p className="mt-4 text-sm text-destructive">{error}</p> : null}
+      {error ? <p className="text-sm text-destructive">{error}</p> : null}
 
       {images.length === 0 ? (
-        <p className="mt-6 text-sm text-muted-foreground">
-          Todavía no hay imágenes para este producto.
-        </p>
+        <div className="rounded-xl border border-dashed border-border/80 px-6 py-12 text-center text-sm text-muted-foreground">
+          Aún no hay fotos. Suba la primera imagen de este producto.
+        </div>
       ) : (
-        <div className="mt-6 grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {images.map((image) => (
             <div
               key={image.id}
@@ -124,14 +126,15 @@ export function ProductImagesPanel({
               <div className="relative aspect-[4/3] bg-muted">
                 <Image
                   src={getProductImagePublicUrl(image.storage_path)}
-                  alt={image.alt_text ?? "Product image"}
+                  alt={image.alt_text ?? "Imagen del producto"}
                   fill
                   className="object-cover"
+                  sizes="(max-width: 768px) 100vw, 33vw"
                 />
               </div>
-              <div className="space-y-3 p-4">
+              <div className="flex flex-wrap items-center gap-2 p-4">
                 {image.is_primary ? (
-                  <Label>Imagen principal</Label>
+                  <Label>Foto principal</Label>
                 ) : (
                   <Button
                     type="button"
@@ -140,7 +143,7 @@ export function ProductImagesPanel({
                     disabled={isPending}
                     onClick={() => handleSetPrimary(image.id)}
                   >
-                    Marcar como principal
+                    Usar como principal
                   </Button>
                 )}
                 <Button
@@ -157,6 +160,16 @@ export function ProductImagesPanel({
           ))}
         </div>
       )}
+    </>
+  );
+
+  if (embedded) {
+    return <div className="space-y-6">{content}</div>;
+  }
+
+  return (
+    <div className="mx-auto w-full max-w-4xl space-y-6 rounded-xl border bg-card p-6">
+      {content}
     </div>
   );
 }

@@ -6,16 +6,24 @@ type ProductsPaginationProps = {
   page: number;
   totalPages: number;
   query?: string;
+  categoryId?: string;
 };
 
-function buildHref(page: number, query?: string) {
+function buildHref(page: number, query?: string, categoryId?: string) {
   const params = new URLSearchParams();
+
   if (query?.trim()) {
     params.set("q", query.trim());
   }
+
+  if (categoryId?.trim()) {
+    params.set("category", categoryId.trim());
+  }
+
   if (page > 1) {
     params.set("page", String(page));
   }
+
   const qs = params.toString();
   return qs ? `/products?${qs}` : "/products";
 }
@@ -24,6 +32,7 @@ export function ProductsPagination({
   page,
   totalPages,
   query,
+  categoryId,
 }: ProductsPaginationProps) {
   if (totalPages <= 1) {
     return null;
@@ -37,7 +46,7 @@ export function ProductsPagination({
       <div className="flex items-center gap-2">
         {page > 1 ? (
           <Link
-            href={buildHref(page - 1, query)}
+            href={buildHref(page - 1, query, categoryId)}
             className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
           >
             Anterior
@@ -54,7 +63,7 @@ export function ProductsPagination({
         )}
         {page < totalPages ? (
           <Link
-            href={buildHref(page + 1, query)}
+            href={buildHref(page + 1, query, categoryId)}
             className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
           >
             Siguiente
