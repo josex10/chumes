@@ -6,7 +6,9 @@ import { confirmAndReserve, updateEventStatus } from "@/lib/events/actions";
 import { EVENT_PHASE, EVENT_STATUS } from "@/lib/events/constants";
 import { canConfirmAndReserve } from "@/lib/events/event-badges";
 import { getStatusPhase } from "@/lib/events/status-transitions";
-import { EventStatusCombobox } from "@/components/events/event-status-combobox";
+import { ArchiveLostDialog } from "@/components/events/archive-lost-dialog";
+import { EventStatusSelect } from "@/components/events/event-status-select";
+import { Archive, BookmarkCheck, Layers, Trophy } from "lucide-react";
 import type { EventStatus, EventWithRelations } from "@/lib/supabase/types";
 import { Button } from "@/components/ui/button";
 import {
@@ -29,11 +31,16 @@ export function EventStatusActions({
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [lostDialogOpen, setLostDialogOpen] = useState(false);
 
   const phase = getStatusPhase(event.event_statuses.code);
   const reserveCheck = canConfirmAndReserve(event);
   const isTerminal = phase === EVENT_PHASE.TERMINAL;
   const isLost = event.event_statuses.code === EVENT_STATUS.LOST;
+  const isCompleted = event.event_statuses.code === EVENT_STATUS.COMPLETED;
+  const canArchiveLost =
+    phase === EVENT_PHASE.COMMERCIAL ||
+    (phase === EVENT_PHASE.OPERATIONAL && !isCompleted);
 
   function handleStatusChange(nextStatusCode: string) {
     if (nextStatusCode === event.event_statuses.code) return;
@@ -61,25 +68,50 @@ export function EventStatusActions({
     });
   }
 
+  function handleArchive(nextStatusCode: string) {
+    setError(null);
+    startTransition(async () => {
+      const result = await updateEventStatus(event.id, nextStatusCode);
+      if (!result.success) {
+        setError(result.error);
+        return;
+      }
+      router.refresh();
+    });
+  }
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Estado</CardTitle>
+        <CardTitle className="inline-flex items-center gap-2">
+          <Layers className="size-4 text-muted-foreground" />
+          Estado
+        </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         {isTerminal ? (
           <div>
             <p className="text-sm text-muted-foreground">Estado actual</p>
-            <p className="mt-1 font-medium">{event.event_statuses.name}</p>
+            <div className="mt-2">
+              <EventStatusSelect
+                statuses={[event.event_statuses]}
+                value={event.event_statuses.code}
+                onValueChange={() => {}}
+                disabled
+                size="default"
+              />
+            </div>
           </div>
         ) : (
           <div className="space-y-2">
             <Label htmlFor="event-status">Estado actual</Label>
-            <EventStatusCombobox
+            <EventStatusSelect
               statuses={selectableStatuses}
               value={event.event_statuses.code}
               onValueChange={handleStatusChange}
               disabled={isPending}
+              pending={isPending}
+              size="default"
             />
           </div>
         )}
@@ -93,7 +125,10 @@ export function EventStatusActions({
 
         {phase === EVENT_PHASE.COMMERCIAL && (
           <div className="rounded-lg border border-dashed p-3">
-            <p className="text-sm font-medium">Confirmar y reservar</p>
+            <p className="text-sm font-medium inline-flex items-center gap-1.5">
+              <BookmarkCheck className="size-4" />
+              Confirmar y reservar
+            </p>
             {!reserveCheck.ready ? (
               <p className="mt-1 text-sm text-muted-foreground">
                 Falta: {reserveCheck.missing.join(", ")}
@@ -106,16 +141,53 @@ export function EventStatusActions({
             <Button
               type="button"
               variant="commit"
-              className="mt-3 w-full"
+              className="mt-3 inline-flex w-full items-center gap-1.5"
               disabled={isPending || !reserveCheck.ready}
               onClick={handleReserve}
             >
+              <BookmarkCheck className="size-4" />
               Confirmar y reservar
             </Button>
           </div>
         )}
 
+        {isCompleted && (
+          <Button
+            type="button"
+            variant="outline"
+            className="inline-flex w-full items-center gap-1.5"
+            disabled={isPending}
+            onClick={() => handleArchive(EVENT_STATUS.WON_ARCHIVED)}
+          >
+            <Trophy className="size-4" />
+            Archivar como ganado
+          </Button>
+        )}
+
+        {canArchiveLost && (
+          <Button
+            type="button"
+            variant="destructive"
+            className="inline-flex w-full items-center gap-1.5 bg-rose-600 text-white hover:bg-rose-700 hover:text-white dark:bg-rose-700 dark:hover:bg-rose-600"
+            disabled={isPending}
+            onClick={() => setLostDialogOpen(true)}
+          >
+            <Archive className="size-4" />
+            Archivar como perdido
+          </Button>
+        )}
+
         {error && <p className="text-sm text-destructive">{error}</p>}
+
+        <ArchiveLostDialog
+          open={lostDialogOpen}
+          onOpenChange={setLostDialogOpen}
+          pending={isPending}
+          onConfirm={() => {
+            setLostDialogOpen(false);
+            handleArchive(EVENT_STATUS.LOST);
+          }}
+        />
       </CardContent>
     </Card>
   );

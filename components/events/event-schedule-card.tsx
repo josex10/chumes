@@ -1,4 +1,9 @@
 import {
+  CalendarDays,
+  PackageCheck,
+  Truck,
+} from "lucide-react";
+import {
   formatDeliveryPickupDateTime,
   formatEventDate,
   formatDatesStatusLabel,
@@ -37,21 +42,27 @@ export function EventScheduleCard({
     {
       label: "Evento",
       value: formatEventDate(eventDate),
+      icon: CalendarDays,
     },
     {
       label: "Entrega",
       value: formatDeliveryPickupDateTime(deliveryDate),
+      icon: Truck,
     },
     {
       label: "Recogida",
       value: formatDeliveryPickupDateTime(pickupDate),
+      icon: PackageCheck,
     },
   ];
 
   return (
     <Card className="ring-1 ring-border/60">
       <CardHeader className="flex flex-row items-center justify-between gap-3 space-y-0 pb-4">
-        <CardTitle className="text-lg">Fechas de la reserva</CardTitle>
+        <CardTitle className="inline-flex items-center gap-2 text-lg">
+          <CalendarDays className="size-4 text-muted-foreground" />
+          Fechas de la reserva
+        </CardTitle>
         <span
           className={cn(
             "shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium",
@@ -68,7 +79,8 @@ export function EventScheduleCard({
               key={row.label}
               className="flex items-start justify-between gap-4 px-4 py-3"
             >
-              <dt className="w-24 shrink-0 text-sm text-muted-foreground">
+              <dt className="inline-flex w-28 shrink-0 items-center gap-1.5 text-sm text-muted-foreground">
+                <row.icon className="size-3.5" />
                 {row.label}
               </dt>
               <dd className="min-w-0 flex-1 text-right text-sm font-medium leading-snug capitalize">

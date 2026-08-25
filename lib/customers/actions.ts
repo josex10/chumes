@@ -83,7 +83,9 @@ export async function updateCustomer(
   }
 
   revalidatePath("/customers");
+  revalidatePath(`/customers/${id}`);
   revalidatePath(`/customers/${id}/edit`);
+  revalidatePath("/events", "layout");
   return { success: true };
 }
 

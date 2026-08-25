@@ -436,11 +436,13 @@ export type Event = {
   first_contact_at: string | null;
   last_contact_at: string | null;
   follow_up_at: string | null;
+  follow_up_paused_at: string | null;
   no_response_at: string | null;
   lost_reason: string | null;
   priority: "LOW" | "NORMAL" | "HIGH";
   has_inventory_conflicts: boolean;
   reserved_at: string | null;
+  archived_at: string | null;
   created_at: string;
   updated_at: string;
   created_by: string | null;
@@ -454,6 +456,34 @@ export type EventWithRelations = Event & {
   event_sources: EventSource;
   quotes?: (Quote & { quote_statuses?: QuoteStatus; quote_items?: { id: string }[] })[];
   payment_summary?: PaymentSummary | null;
+};
+
+export type FollowUpTemplate = {
+  id: string;
+  name: string;
+  body: string;
+  step: 1 | 2 | 3;
+  is_active: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type EventFollowUp = {
+  id: string;
+  event_id: string;
+  step: 1 | 2 | 3;
+  due_at: string;
+  completed_at: string;
+  channel: string;
+  template_id: string | null;
+  message_body: string | null;
+  created_at: string;
+  created_by: string | null;
+};
+
+export type EventFollowUpWithRelations = EventFollowUp & {
+  follow_up_templates: Pick<FollowUpTemplate, "id" | "name"> | null;
 };
 
 export type Database = {
@@ -1060,11 +1090,13 @@ export type Database = {
           first_contact_at?: string | null;
           last_contact_at?: string | null;
           follow_up_at?: string | null;
+          follow_up_paused_at?: string | null;
           no_response_at?: string | null;
           lost_reason?: string | null;
           priority?: "LOW" | "NORMAL" | "HIGH";
           has_inventory_conflicts?: boolean;
           reserved_at?: string | null;
+          archived_at?: string | null;
           created_by?: string | null;
           updated_by?: string | null;
         };
@@ -1093,6 +1125,50 @@ export type Database = {
             columns: ["source_id"];
             referencedRelation: "event_sources";
             referencedColumns: ["id"];
+          },
+        ];
+      };
+      follow_up_templates: {
+        Row: FollowUpTemplate;
+        Insert: {
+          name: string;
+          body: string;
+          step: 1 | 2 | 3;
+          is_active?: boolean;
+          sort_order?: number;
+        };
+        Update: Partial<
+          Database["public"]["Tables"]["follow_up_templates"]["Insert"]
+        >;
+        Relationships: [];
+      };
+      event_follow_ups: {
+        Row: EventFollowUp;
+        Insert: {
+          event_id: string;
+          step: 1 | 2 | 3;
+          due_at: string;
+          completed_at?: string;
+          channel?: string;
+          template_id?: string | null;
+          message_body?: string | null;
+          created_by?: string | null;
+        };
+        Update: Partial<
+          Database["public"]["Tables"]["event_follow_ups"]["Insert"]
+        >;
+        Relationships: [
+          {
+            foreignKeyName: "event_follow_ups_event_id_fkey",
+            columns: ["event_id"],
+            referencedRelation: "events",
+            referencedColumns: ["id"],
+          },
+          {
+            foreignKeyName: "event_follow_ups_template_id_fkey",
+            columns: ["template_id"],
+            referencedRelation: "follow_up_templates",
+            referencedColumns: ["id"],
           },
         ];
       };

@@ -6,6 +6,7 @@ import {
   CalendarDays,
   FileText,
   LayoutDashboard,
+  MessageCircleMore,
   Package,
   Users,
 } from "lucide-react";
@@ -14,12 +15,17 @@ import { cn } from "@/lib/utils";
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/events", label: "Eventos", icon: CalendarDays },
+  { href: "/seguimientos", label: "Seguimientos", icon: MessageCircleMore },
   { href: "/customers", label: "Clientes", icon: Users },
   { href: "/products", label: "Productos", icon: Package },
   { href: "/quotes", label: "Cotizaciones", icon: FileText },
 ] as const;
 
-export function AppSidebar() {
+type AppSidebarProps = {
+  pendingFollowUps?: number;
+};
+
+export function AppSidebar({ pendingFollowUps = 0 }: AppSidebarProps) {
   const pathname = usePathname();
 
   return (
@@ -44,6 +50,11 @@ export function AppSidebar() {
             >
               <Icon className="size-4 shrink-0" strokeWidth={1.5} />
               {label}
+              {href === "/seguimientos" && pendingFollowUps > 0 ? (
+                <span className="ml-auto rounded-full bg-amber-500/15 px-1.5 py-0.5 text-[11px] font-medium tabular-nums text-amber-800 dark:text-amber-300">
+                  {pendingFollowUps > 99 ? "99+" : pendingFollowUps}
+                </span>
+              ) : null}
             </Link>
           );
         })}

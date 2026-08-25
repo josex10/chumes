@@ -1,10 +1,21 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ArrowLeft, MapPin, Pencil, Phone, UserRound } from "lucide-react";
+import { getCustomerTypes } from "@/lib/customers/queries";
+import {
+  formatPhoneNumber,
+  resolveCustomerPhone,
+} from "@/lib/customers/phone";
+import { EventCustomerName } from "@/components/events/event-customer-name";
 import { getEventById, getEventStatuses } from "@/lib/events/queries";
 import { getLinkableQuotesForCustomer } from "@/lib/quotes/queries";
 import { getEventPaymentData } from "@/lib/payments/queries";
-import { getStatusPhase } from "@/lib/events/status-transitions";
-import { EVENT_PHASE, EVENT_STATUS } from "@/lib/events/constants";
+import { canTransitionStatus, getStatusPhase, withLostArchiveAtEnd } from "@/lib/events/status-transitions";
+import { EVENT_PHASE, EVENT_STATUS, EVENTS_PIPELINE_TAB } from "@/lib/events/constants";
+import { buildEventsHref } from "@/lib/events/events-url";
+import { EventFollowUpsCard } from "@/components/follow-ups/event-follow-ups-card";
+import { getEventFollowUps, getFollowUpTemplates } from "@/lib/follow-ups/queries";
+import { getFollowUpProgress } from "@/lib/follow-ups/schedule";
 import { EventQuotePanel } from "@/components/events/event-quote-panel";
 import { EventPaymentsPanel } from "@/components/events/event-payments-panel";
 import { EventScheduleCard } from "@/components/events/event-schedule-card";
@@ -26,38 +37,32 @@ type EventDetailPageProps = {
 };
 
 function getSelectableStatuses(
-  phase: ReturnType<typeof getStatusPhase>,
+  currentStatusCode: string,
+  currentPhase: string,
   allStatuses: EventStatus[],
 ): EventStatus[] {
-  if (phase === EVENT_PHASE.COMMERCIAL) {
-    return allStatuses.filter(
-      (status) =>
-        status.phase === EVENT_PHASE.COMMERCIAL || status.code === EVENT_STATUS.LOST,
-    );
-  }
+  const pipelineStatuses = allStatuses.filter(
+    (status) =>
+      status.code === currentStatusCode ||
+      status.phase === currentPhase ||
+      (currentPhase === EVENT_PHASE.OPERATIONAL &&
+        status.code === EVENT_STATUS.WON_ARCHIVED &&
+        canTransitionStatus(currentStatusCode, status.code)),
+  );
 
-  if (phase === EVENT_PHASE.OPERATIONAL) {
-    return allStatuses.filter(
-      (status) =>
-        status.phase === EVENT_PHASE.OPERATIONAL ||
-        status.code === EVENT_STATUS.COMPLETED ||
-        status.code === EVENT_STATUS.CANCELLED,
-    );
-  }
-
-  return [];
-}
-
-function getCustomerPhone(event: NonNullable<Awaited<ReturnType<typeof getEventById>>>) {
-  return event.customer_contacts?.phone ?? event.customers.phone ?? null;
+  return withLostArchiveAtEnd(pipelineStatuses, allStatuses);
 }
 
 export default async function EventDetailPage({ params }: EventDetailPageProps) {
   const { id } = await params;
-  const [event, allStatuses] = await Promise.all([
-    getEventById(id),
-    getEventStatuses(),
-  ]);
+  const [event, allStatuses, customerTypes, followUps, templates] =
+    await Promise.all([
+      getEventById(id),
+      getEventStatuses(),
+      getCustomerTypes(),
+      getEventFollowUps(id),
+      getFollowUpTemplates(true),
+    ]);
 
   if (!event) {
     notFound();
@@ -65,47 +70,61 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
 
   const phase = getStatusPhase(event.event_statuses.code);
   const isCommercial = phase === EVENT_PHASE.COMMERCIAL;
+  const followUpProgress = getFollowUpProgress(
+    event.created_at,
+    followUps.map((item) => ({
+      step: item.step,
+      completed_at: item.completed_at,
+    })),
+    event.follow_up_paused_at,
+  );
   const [linkableQuotes, paymentData] = await Promise.all([
     isCommercial
       ? getLinkableQuotesForCustomer(event.customer_id)
       : Promise.resolve([]),
     getEventPaymentData(id),
   ]);
-  const phone = getCustomerPhone(event);
-  const selectableStatuses = getSelectableStatuses(phase, allStatuses);
+  const phone = resolveCustomerPhone(
+    event.customer_contacts?.phone,
+    event.customers.phone,
+  );
+  const formattedPhone = phone ? formatPhoneNumber(phone) : null;
+  const selectableStatuses = getSelectableStatuses(
+    event.event_statuses.code,
+    event.event_statuses.phase,
+    allStatuses,
+  );
+  const backHref =
+    phase === EVENT_PHASE.TERMINAL
+      ? buildEventsHref({ tab: EVENTS_PIPELINE_TAB.HISTORY })
+      : "/events";
 
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-8 px-6 py-10">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <Link
-            href="/events"
-            className="text-sm text-muted-foreground hover:text-foreground"
+            href={backHref}
+            className="inline-flex w-fit items-center gap-1.5 text-sm text-muted-foreground transition hover:text-foreground"
           >
-            ← Volver al tablero
+            <ArrowLeft className="size-4" />
+            {phase === EVENT_PHASE.TERMINAL
+              ? "Volver al historial"
+              : "Volver al tablero"}
           </Link>
           <h1 className="mt-2 text-3xl font-semibold tracking-tight">
             {event.title}
           </h1>
-          <p className="mt-2 text-muted-foreground">
-            {event.customers.name} · {event.event_statuses.name}
-          </p>
-          {phone && (
-            <p className="mt-1">
-              <a
-                href={`tel:${phone.replace(/\D/g, "")}`}
-                className="text-lg font-semibold tracking-tight hover:underline"
-              >
-                {phone}
-              </a>
-            </p>
-          )}
         </div>
         {phase === EVENT_PHASE.COMMERCIAL && (
           <Link
             href={`/events/${event.id}/edit`}
-            className={cn(buttonVariants({ variant: "outline" }))}
+            className={cn(
+              buttonVariants({ variant: "outline" }),
+              "inline-flex items-center gap-1.5",
+            )}
           >
+            <Pencil className="size-4" />
             Editar
           </Link>
         )}
@@ -118,33 +137,46 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
               <CardTitle>Información</CardTitle>
             </CardHeader>
             <CardContent className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <p className="text-sm text-muted-foreground">Cliente</p>
-                <p className="font-medium">{event.customers.name}</p>
+              <div className="min-w-0 space-y-1">
+                <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                  <UserRound className="size-3.5" />
+                  Cliente
+                </p>
+                <EventCustomerName
+                  customer={event.customers}
+                  customerTypes={customerTypes}
+                  className="font-medium text-foreground"
+                />
               </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Teléfono</p>
-                {phone ? (
+              <div className="min-w-0 space-y-1">
+                <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                  <Phone className="size-3.5" />
+                  Teléfono
+                </p>
+                {formattedPhone && phone ? (
                   <a
                     href={`tel:${phone.replace(/\D/g, "")}`}
-                    className="font-medium hover:underline"
+                    className="block font-medium tabular-nums hover:underline"
                   >
-                    {phone}
+                    {formattedPhone}
                   </a>
                 ) : (
                   <p className="font-medium">—</p>
                 )}
               </div>
-              <div>
+              <div className="min-w-0 space-y-1">
                 <p className="text-sm text-muted-foreground">Fuente</p>
                 <p className="font-medium">{event.event_sources.name}</p>
               </div>
-              <div className="sm:col-span-2">
-                <p className="text-sm text-muted-foreground">Ubicación</p>
+              <div className="min-w-0 space-y-1">
+                <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                  <MapPin className="size-3.5" />
+                  Ubicación
+                </p>
                 <p className="font-medium">{event.estimated_location ?? "—"}</p>
               </div>
               {event.notes && (
-                <div className="sm:col-span-2">
+                <div className="min-w-0 space-y-1 sm:col-span-2">
                   <p className="text-sm text-muted-foreground">Notas</p>
                   <p className="font-medium">{event.notes}</p>
                 </div>
@@ -156,6 +188,14 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
             eventDate={event.event_date}
             deliveryDate={event.delivery_date}
             pickupDate={event.pickup_date}
+          />
+
+          <EventFollowUpsCard
+            event={event}
+            followUps={followUps}
+            templates={templates}
+            progress={followUpProgress}
+            isCommercial={isCommercial}
           />
 
           <EventQuotePanel

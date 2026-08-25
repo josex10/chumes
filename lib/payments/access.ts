@@ -1,4 +1,4 @@
-import { EVENT_PHASE, EVENT_STATUS, TERMINAL_STATUS_CODES } from "@/lib/events/constants";
+import { EVENT_PHASE, isArchivedStatus } from "@/lib/events/constants";
 import { PAYMENT_STATUS, type PaymentStatus } from "@/lib/payments/constants";
 
 export type PaymentAccess = {
@@ -13,11 +13,8 @@ export function getPaymentAccess(
   eventStatusCode: string,
   paymentStatus: PaymentStatus,
 ): PaymentAccess {
-  const isTerminalPhase = eventPhase === EVENT_PHASE.TERMINAL;
-  const isClosedStatus = TERMINAL_STATUS_CODES.includes(
-    eventStatusCode as (typeof TERMINAL_STATUS_CODES)[number],
-  );
-  const movementsLocked = isTerminalPhase || isClosedStatus;
+  const movementsLocked =
+    eventPhase === EVENT_PHASE.TERMINAL || isArchivedStatus(eventStatusCode);
   const isPaid = paymentStatus === PAYMENT_STATUS.PAID;
 
   return {

@@ -2,6 +2,7 @@ import {
   COMMERCIAL_STATUS_CODES,
   EVENT_PHASE,
   EVENT_STATUS,
+  TERMINAL_STATUS_CODES,
   type EventPhase,
 } from "@/lib/events/constants";
 import {
@@ -15,14 +16,12 @@ import {
 } from "@/lib/events/operational-transitions";
 
 export function getStatusPhase(statusCode: string): EventPhase {
-  if (isOperationalStatus(statusCode)) return EVENT_PHASE.OPERATIONAL;
-  if (
-    statusCode === EVENT_STATUS.LOST ||
-    statusCode === EVENT_STATUS.COMPLETED ||
-    statusCode === EVENT_STATUS.CANCELLED
-  ) {
+  if (TERMINAL_STATUS_CODES.includes(statusCode as never)) {
     return EVENT_PHASE.TERMINAL;
   }
+
+  if (isOperationalStatus(statusCode)) return EVENT_PHASE.OPERATIONAL;
+
   return EVENT_PHASE.COMMERCIAL;
 }
 
@@ -58,32 +57,51 @@ export function getAllowedTransitions(currentStatusCode: string): string[] {
   return [];
 }
 
+export function withLostArchiveAtEnd<T extends { code: string }>(
+  statuses: T[],
+  allStatuses: T[],
+): T[] {
+  const withoutLost = statuses.filter(
+    (status) => status.code !== EVENT_STATUS.LOST,
+  );
+  const lost = allStatuses.find((status) => status.code === EVENT_STATUS.LOST);
+  return lost ? [...withoutLost, lost] : withoutLost;
+}
+
 export function getStatusActionLabel(statusCode: string): string {
   switch (statusCode) {
-    case EVENT_STATUS.FOLLOW_UP:
-      return "Marcar en seguimiento";
+    case EVENT_STATUS.INQUIRY:
+      return "Marcar solicitud inicial";
     case EVENT_STATUS.NO_RESPONSE:
       return "Marcar sin respuesta";
     case EVENT_STATUS.QUOTING:
-      return "Marcar cotizando";
-    case EVENT_STATUS.QUOTE_SENT:
-      return "Marcar cotización enviada";
+      return "Marcar sin cotizar";
     case EVENT_STATUS.QUOTED_NO_DATES:
-      return "Marcar cotizado sin fechas";
+      return "Marcar cotizado sin fecha";
+    case EVENT_STATUS.QUOTE_SENT:
+      return "Marcar pendiente de aprobar";
+    case EVENT_STATUS.FOLLOW_UP:
+      return "Marcar seguimiento de semana actual";
     case EVENT_STATUS.APPROVED:
-      return "Marcar aprobada";
+      return "Marcar aprobado pendiente de depósito";
     case EVENT_STATUS.LOST:
-      return "Marcar perdida";
+      return "Archivar como perdido";
     case EVENT_STATUS.RESERVED:
       return "Confirmar y reservar";
+    case EVENT_STATUS.PREP_CURRENT_WEEK:
+      return "Marcar preparando semana actual";
+    case EVENT_STATUS.PREP_DAY_BEFORE:
+      return "Marcar preparando día previo";
     case EVENT_STATUS.DELIVERED:
-      return "Marcar entregada";
+      return "Marcar entregado";
     case EVENT_STATUS.PICKED_UP:
-      return "Marcar recogida";
+      return "Marcar listo para recolección";
     case EVENT_STATUS.INSPECTION_PENDING:
       return "Marcar inspección";
     case EVENT_STATUS.COMPLETED:
-      return "Marcar completada";
+      return "Marcar cerrado ganado";
+    case EVENT_STATUS.WON_ARCHIVED:
+      return "Archivar como ganado";
     case EVENT_STATUS.CANCELLED:
       return "Cancelar evento";
     default:

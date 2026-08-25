@@ -1,5 +1,12 @@
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
-import { EVENT_STATUS } from "@/lib/events/constants";
+import {
+  EVENT_ARCHIVE_TYPE,
+  EVENT_HISTORY_PAGE_SIZE,
+  EVENT_PHASE,
+  EVENT_STATUS,
+  type EventArchiveType,
+  type EventPhase,
+} from "@/lib/events/constants";
 import { getQuoteById } from "@/lib/quotes/queries";
 import { attachPaymentSummariesToEvents, getEventPaymentData } from "@/lib/payments/queries";
 import type { EventReservationPdfData } from "@/lib/events/pdf/types";
@@ -84,6 +91,23 @@ export async function getEventStatuses(): Promise<EventStatus[]> {
 
 export type GetEventsOptions = {
   customerId?: string;
+  phases?: EventPhase[];
+};
+
+export type GetArchivedEventsOptions = {
+  customerId?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  archiveType?: EventArchiveType;
+  page?: number;
+  pageSize?: number;
+};
+
+export type GetArchivedEventsResult = {
+  events: EventWithRelations[];
+  total: number;
+  page: number;
+  pageSize: number;
 };
 
 export async function getEventsCreatedBetween(
@@ -173,6 +197,21 @@ export async function getEvents(
     builder = builder.eq("customer_id", options.customerId);
   }
 
+  if (options.phases?.length) {
+    const { data: statuses } = await supabase
+      .from("event_statuses")
+      .select("id")
+      .in("phase", options.phases)
+      .eq("is_active", true);
+
+    if (!statuses?.length) return [];
+
+    builder = builder.in(
+      "status_id",
+      statuses.map((status) => status.id),
+    );
+  }
+
   const { data, error } = await builder;
 
   if (error) {
@@ -181,6 +220,81 @@ export async function getEvents(
   }
 
   return enrichEvents((data ?? []) as EventWithRelations[]);
+}
+
+export async function getArchivedEvents(
+  options: GetArchivedEventsOptions = {},
+): Promise<GetArchivedEventsResult> {
+  const supabase = createAdminSupabaseClient();
+  const page = Math.max(1, options.page ?? 1);
+  const pageSize = Math.max(1, options.pageSize ?? EVENT_HISTORY_PAGE_SIZE);
+  const offset = (page - 1) * pageSize;
+
+  const { data: statuses } = await supabase
+    .from("event_statuses")
+    .select("id, code")
+    .eq("phase", EVENT_PHASE.TERMINAL);
+
+  const matchingStatuses = (statuses ?? []).filter((status) => {
+    if (options.archiveType === EVENT_ARCHIVE_TYPE.WON) {
+      return (
+        status.code === EVENT_STATUS.WON_ARCHIVED ||
+        status.code === EVENT_STATUS.COMPLETED
+      );
+    }
+
+    if (options.archiveType === EVENT_ARCHIVE_TYPE.LOST) {
+      return (
+        status.code === EVENT_STATUS.LOST ||
+        status.code === EVENT_STATUS.CANCELLED
+      );
+    }
+
+    return true;
+  });
+
+  if (!matchingStatuses.length) {
+    return { events: [], total: 0, page, pageSize };
+  }
+
+  let builder = supabase
+    .from("events")
+    .select(EVENT_SELECT, { count: "exact" })
+    .in(
+      "status_id",
+      matchingStatuses.map((status) => status.id),
+    )
+    .order("archived_at", { ascending: false, nullsFirst: false })
+    .order("updated_at", { ascending: false });
+
+  if (options.customerId) {
+    builder = builder.eq("customer_id", options.customerId);
+  }
+
+  if (options.dateFrom) {
+    builder = builder.gte("event_date", options.dateFrom);
+  }
+
+  if (options.dateTo) {
+    builder = builder.lte("event_date", options.dateTo);
+  }
+
+  const { data, error, count } = await builder.range(
+    offset,
+    offset + pageSize - 1,
+  );
+
+  if (error) {
+    console.error("[getArchivedEvents]", error.message);
+    return { events: [], total: 0, page, pageSize };
+  }
+
+  return {
+    events: await enrichEvents((data ?? []) as EventWithRelations[]),
+    total: count ?? 0,
+    page,
+    pageSize,
+  };
 }
 
 export async function getEventsByCustomerId(

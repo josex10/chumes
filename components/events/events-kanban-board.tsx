@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   DndContext,
@@ -12,30 +12,33 @@ import {
   type DragStartEvent,
 } from "@dnd-kit/core";
 import { updateEventStatus } from "@/lib/events/actions";
-import { EVENT_PHASE } from "@/lib/events/constants";
-import { canTransitionStatus } from "@/lib/events/status-transitions";
+import {
+  EVENT_PHASE,
+  EVENTS_PIPELINE_TAB,
+  type EventsPipelineTab,
+} from "@/lib/events/constants";
+import { canTransitionStatus, withLostArchiveAtEnd } from "@/lib/events/status-transitions";
 import { EventKanbanCard } from "@/components/events/event-kanban-card";
 import { EventKanbanColumn } from "@/components/events/event-kanban-column";
-import { Button } from "@/components/ui/button";
 import type { EventStatus, EventWithRelations } from "@/lib/supabase/types";
-import { cn } from "@/lib/utils";
 
 type EventsKanbanBoardProps = {
   statuses: EventStatus[];
   events: EventWithRelations[];
+  pipelineTab: EventsPipelineTab;
 };
-
-type ActivePipeline = "commercial" | "operational";
 
 export function EventsKanbanBoard({
   statuses,
   events,
+  pipelineTab,
 }: EventsKanbanBoardProps) {
   const router = useRouter();
+  const scrollerRef = useRef<HTMLDivElement>(null);
   const [isPending, startTransition] = useTransition();
+  const [pendingEventId, setPendingEventId] = useState<string | null>(null);
   const [activeEvent, setActiveEvent] = useState<EventWithRelations | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [activePipeline, setActivePipeline] = useState<ActivePipeline>("commercial");
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -67,8 +70,83 @@ export function EventsKanbanBoard({
     return map;
   }, [events, statuses]);
 
-  const activeStatuses =
-    activePipeline === "commercial" ? commercialStatuses : operationalStatuses;
+  const isCommercial = pipelineTab === EVENTS_PIPELINE_TAB.COMMERCIAL;
+  const activeStatuses = isCommercial ? commercialStatuses : operationalStatuses;
+  const selectableStatuses = useMemo(
+    () => withLostArchiveAtEnd(activeStatuses, statuses),
+    [activeStatuses, statuses],
+  );
+
+  useEffect(() => {
+    const scroller = scrollerRef.current;
+    if (!scroller) return;
+
+    function onWheel(event: WheelEvent) {
+      if (!scroller) return;
+
+      const path = event.composedPath();
+      const overPopover = path.some(
+        (node) =>
+          node instanceof HTMLElement &&
+          (node.dataset.slot === "popover-content" ||
+            node.dataset.slot === "select-content" ||
+            node.dataset.slot === "dialog-content" ||
+            node.dataset.slot === "dialog-overlay"),
+      );
+      if (overPopover) return;
+
+      const overColumnBody = path.some(
+        (node) =>
+          node instanceof HTMLElement && node.dataset.columnScroll === "true",
+      );
+
+      const horizontalFromGesture =
+        Math.abs(event.deltaX) > Math.abs(event.deltaY);
+      const panBoard =
+        event.shiftKey || horizontalFromGesture || !overColumnBody;
+
+      if (!panBoard) return;
+
+      const delta = event.shiftKey
+        ? event.deltaY
+        : horizontalFromGesture
+          ? event.deltaX
+          : event.deltaY;
+
+      if (delta === 0) return;
+
+      event.preventDefault();
+      scroller.scrollLeft += delta;
+    }
+
+    scroller.addEventListener("wheel", onWheel, { passive: false, capture: true });
+    return () => scroller.removeEventListener("wheel", onWheel, true);
+  }, []);
+
+  function moveEvent(eventId: string, nextStatusCode: string) {
+    const draggedEvent = events.find((item) => item.id === eventId);
+    if (!draggedEvent) return;
+
+    const currentStatusCode = draggedEvent.event_statuses.code;
+    if (currentStatusCode === nextStatusCode) return;
+
+    if (!canTransitionStatus(currentStatusCode, nextStatusCode)) {
+      setError("No se puede mover a ese estado.");
+      return;
+    }
+
+    setError(null);
+    setPendingEventId(eventId);
+    startTransition(async () => {
+      const result = await updateEventStatus(eventId, nextStatusCode);
+      setPendingEventId(null);
+      if (!result.success) {
+        setError(result.error);
+        return;
+      }
+      router.refresh();
+    });
+  }
 
   function handleDragStart(event: DragStartEvent) {
     const dragged = events.find((item) => item.id === event.active.id);
@@ -83,85 +161,37 @@ export function EventsKanbanBoard({
     const overId = event.over?.id;
     if (!overId) return;
 
-    const draggedEvent = events.find((item) => item.id === eventId);
-    if (!draggedEvent) return;
-
-    const nextStatusCode = String(overId);
-    const currentStatusCode = draggedEvent.event_statuses.code;
-
-    if (currentStatusCode === nextStatusCode) return;
-
-    if (!canTransitionStatus(currentStatusCode, nextStatusCode)) {
-      setError("No se puede mover a esa columna.");
-      return;
-    }
-
-    startTransition(async () => {
-      const result = await updateEventStatus(eventId, nextStatusCode);
-      if (!result.success) {
-        setError(result.error);
-        return;
-      }
-      router.refresh();
-    });
+    moveEvent(eventId, String(overId));
   }
 
   return (
-    <div className="space-y-4">
-      <div className="inline-flex rounded-lg border bg-muted/30 p-1">
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          className={cn(
-            activePipeline === "commercial" &&
-              "bg-background shadow-sm hover:bg-background",
-          )}
-          onClick={() => setActivePipeline("commercial")}
-        >
-          Comercial
-        </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          className={cn(
-            activePipeline === "operational" &&
-              "bg-background shadow-sm hover:bg-background",
-          )}
-          onClick={() => setActivePipeline("operational")}
-        >
-          Operación
-        </Button>
-      </div>
-
-      {error && <p className="text-sm text-destructive">{error}</p>}
-      {isPending && (
-        <p className="text-sm text-muted-foreground">Actualizando estado...</p>
-      )}
-
+    <div className="flex min-h-0 flex-1 flex-col gap-3">
       <DndContext
         sensors={sensors}
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
       >
-        <section className="space-y-3">
-          <div>
-            <h2 className="text-lg font-medium">
-              {activePipeline === "commercial" ? "Pipeline comercial" : "Operación"}
-            </h2>
-            <p className="text-sm text-muted-foreground">
-              {activePipeline === "commercial"
-                ? "Flexible — mueve deals libremente entre columnas."
-                : "Estricto — solo avances válidos después de reservar."}
+        <section className="flex min-h-0 flex-1 flex-col">
+          {error ? (
+            <p className="mb-2 shrink-0 text-sm text-destructive">{error}</p>
+          ) : null}
+          {isPending ? (
+            <p className="mb-2 shrink-0 text-sm text-muted-foreground">
+              Actualizando estado...
             </p>
-          </div>
-          <div className="flex gap-4 overflow-x-auto pb-2">
+          ) : null}
+          <div
+            ref={scrollerRef}
+            className="flex min-h-0 flex-1 items-stretch gap-4 overflow-x-auto overflow-y-hidden pb-2"
+          >
             {activeStatuses.map((status) => (
               <EventKanbanColumn
                 key={status.code}
                 status={status}
                 events={eventsByStatus.get(status.code) ?? []}
+                selectableStatuses={selectableStatuses}
+                onStatusChange={moveEvent}
+                pendingEventId={pendingEventId}
               />
             ))}
           </div>

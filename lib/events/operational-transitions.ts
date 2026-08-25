@@ -1,25 +1,37 @@
-import { EVENT_STATUS } from "@/lib/events/constants";
-
-const ALLOWED_TRANSITIONS: Record<string, string[]> = {
-  [EVENT_STATUS.RESERVED]: [EVENT_STATUS.DELIVERED, EVENT_STATUS.CANCELLED],
-  [EVENT_STATUS.DELIVERED]: [EVENT_STATUS.PICKED_UP, EVENT_STATUS.CANCELLED],
-  [EVENT_STATUS.PICKED_UP]: [EVENT_STATUS.INSPECTION_PENDING, EVENT_STATUS.CANCELLED],
-  [EVENT_STATUS.INSPECTION_PENDING]: [EVENT_STATUS.COMPLETED, EVENT_STATUS.CANCELLED],
-  [EVENT_STATUS.COMPLETED]: [],
-  [EVENT_STATUS.CANCELLED]: [],
-};
+import { EVENT_STATUS, OPERATIONAL_STATUS_CODES } from "@/lib/events/constants";
 
 export function canTransitionOperational(
   currentStatusCode: string,
   nextStatusCode: string,
 ): boolean {
-  return (ALLOWED_TRANSITIONS[currentStatusCode] ?? []).includes(nextStatusCode);
+  if (currentStatusCode === nextStatusCode) return false;
+
+  if (!OPERATIONAL_STATUS_CODES.includes(currentStatusCode as never)) {
+    return false;
+  }
+
+  if (OPERATIONAL_STATUS_CODES.includes(nextStatusCode as never)) {
+    return true;
+  }
+
+  return (
+    nextStatusCode === EVENT_STATUS.LOST ||
+    nextStatusCode === EVENT_STATUS.WON_ARCHIVED
+  );
 }
 
 export function getAllowedOperationalTransitions(currentStatusCode: string): string[] {
-  return ALLOWED_TRANSITIONS[currentStatusCode] ?? [];
+  if (!OPERATIONAL_STATUS_CODES.includes(currentStatusCode as never)) {
+    return [];
+  }
+
+  return [
+    ...OPERATIONAL_STATUS_CODES.filter((code) => code !== currentStatusCode),
+    EVENT_STATUS.WON_ARCHIVED,
+    EVENT_STATUS.LOST,
+  ];
 }
 
 export function isOperationalStatus(statusCode: string): boolean {
-  return Boolean(ALLOWED_TRANSITIONS[statusCode]);
+  return OPERATIONAL_STATUS_CODES.includes(statusCode as never);
 }

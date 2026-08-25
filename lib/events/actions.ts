@@ -3,7 +3,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { revalidatePath } from "next/cache";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
-import { EVENT_STATUS } from "@/lib/events/constants";
+import { EVENT_PHASE, EVENT_STATUS } from "@/lib/events/constants";
 import { hasCompleteDates } from "@/lib/events/dates-status";
 import { getEventSourceById } from "@/lib/event-sources/queries";
 import {
@@ -20,7 +20,7 @@ import {
   canTransitionStatus,
   getStatusPhase,
 } from "@/lib/events/status-transitions";
-import { EVENT_PHASE } from "@/lib/events/constants";
+import { getInitialFollowUpAt } from "@/lib/follow-ups/schedule";
 
 type ActionResult =
   | { success: true; eventId?: string }
@@ -88,6 +88,7 @@ export async function createEvent(values: EventFormValues): Promise<ActionResult
         status_id: inquiryStatusId,
         first_contact_at: now,
         last_contact_at: now,
+        follow_up_at: getInitialFollowUpAt(),
         created_by: userId,
         updated_by: userId,
       })
@@ -100,6 +101,7 @@ export async function createEvent(values: EventFormValues): Promise<ActionResult
     }
 
     revalidatePath("/events");
+    revalidatePath("/seguimientos");
     return { success: true, eventId: data.id };
   } catch (error) {
     console.error("[createEvent]", error);
@@ -161,6 +163,7 @@ export async function updateEvent(
     }
 
     revalidatePath("/events");
+    revalidatePath("/seguimientos");
     revalidatePath(`/events/${id}`);
     return { success: true, eventId: id };
   } catch (error) {
@@ -203,6 +206,7 @@ export async function updateEventStatus(
       updated_by: string | null;
       no_response_at?: string;
       lost_reason?: string | null;
+      archived_at?: string;
     } = {
       status_id: nextStatusId,
       updated_by: userId,
@@ -214,6 +218,11 @@ export async function updateEventStatus(
 
     if (nextStatusCode === EVENT_STATUS.LOST) {
       updates.lost_reason = options?.lostReason?.trim() || null;
+      updates.archived_at = now;
+    }
+
+    if (nextStatusCode === EVENT_STATUS.WON_ARCHIVED) {
+      updates.archived_at = now;
     }
 
     const { error } = await supabase
@@ -227,6 +236,7 @@ export async function updateEventStatus(
     }
 
     revalidatePath("/events");
+    revalidatePath("/seguimientos");
     revalidatePath(`/events/${id}`);
     return { success: true, eventId: id };
   } catch (error) {
@@ -292,6 +302,7 @@ export async function confirmAndReserve(id: string): Promise<ActionResult> {
     }
 
     revalidatePath("/events");
+    revalidatePath("/seguimientos");
     revalidatePath(`/events/${id}`);
     return { success: true, eventId: id };
   } catch (error) {
@@ -323,6 +334,7 @@ export async function registerEventContact(id: string): Promise<ActionResult> {
     }
 
     revalidatePath("/events");
+    revalidatePath("/seguimientos");
     revalidatePath(`/events/${id}`);
     return { success: true, eventId: id };
   } catch (error) {
@@ -356,6 +368,7 @@ export async function scheduleEventFollowUp(
     }
 
     revalidatePath("/events");
+    revalidatePath("/seguimientos");
     revalidatePath(`/events/${id}`);
     return { success: true, eventId: id };
   } catch (error) {
@@ -426,6 +439,7 @@ export async function linkQuoteToEvent(
     }
 
     revalidatePath("/events");
+    revalidatePath("/seguimientos");
     revalidatePath(`/events/${eventId}`);
     revalidatePath("/quotes");
     revalidatePath(`/quotes/${quoteId}/edit`);
@@ -482,6 +496,7 @@ export async function unlinkQuoteFromEvent(
     }
 
     revalidatePath("/events");
+    revalidatePath("/seguimientos");
     revalidatePath(`/events/${quote.event_id}`);
     revalidatePath("/quotes");
     revalidatePath(`/quotes/${quoteId}/edit`);

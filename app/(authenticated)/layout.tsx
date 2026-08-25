@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/layout/app-shell";
+import { getFollowUpPendingCount } from "@/lib/follow-ups/queries";
 import { getCurrentProfile } from "@/lib/profiles/get-profile";
 import { getProfileStatusCode } from "@/lib/profiles/status";
 import { PROFILE_STATUS } from "@/lib/profiles/constants";
@@ -31,8 +32,14 @@ export default async function AuthenticatedLayout({
     redirect("/account-setup");
   }
 
+  const pendingFollowUps = await getFollowUpPendingCount();
+
   return (
-    <AppShell fullName={profile.full_name} email={profile.email}>
+    <AppShell
+      fullName={profile.full_name}
+      email={profile.email}
+      pendingFollowUps={pendingFollowUps}
+    >
       {children}
     </AppShell>
   );

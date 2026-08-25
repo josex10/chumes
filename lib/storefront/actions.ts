@@ -7,6 +7,7 @@ import {
   formatPhoneNumber,
 } from "@/lib/customers/phone";
 import { EVENT_PRIORITY } from "@/lib/events/constants";
+import { getInitialFollowUpAt } from "@/lib/follow-ups/schedule";
 import { getInquiryStatusId } from "@/lib/events/queries";
 import { linkQuoteToEvent } from "@/lib/events/actions";
 import { PRODUCT_PRICE_TYPE } from "@/lib/products/constants";
@@ -264,6 +265,7 @@ export async function submitQuoteRequest(
         priority: EVENT_PRIORITY.NORMAL,
         first_contact_at: now,
         last_contact_at: now,
+        follow_up_at: getInitialFollowUpAt(),
         created_by: null,
         updated_by: null,
       })
