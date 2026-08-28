@@ -1,7 +1,22 @@
 const PHONE_DIGIT_LENGTH = 8;
+const CR_COUNTRY_CODE = "506";
 
 export function extractPhoneDigits(value: string): string {
-  return value.replace(/\D/g, "").slice(0, PHONE_DIGIT_LENGTH);
+  let digits = value.replace(/\D/g, "");
+
+  if (
+    digits.startsWith(`00${CR_COUNTRY_CODE}`) &&
+    digits.length >= 5 + PHONE_DIGIT_LENGTH
+  ) {
+    digits = digits.slice(5);
+  } else if (
+    digits.startsWith(CR_COUNTRY_CODE) &&
+    digits.length >= CR_COUNTRY_CODE.length + PHONE_DIGIT_LENGTH
+  ) {
+    digits = digits.slice(CR_COUNTRY_CODE.length);
+  }
+
+  return digits.slice(0, PHONE_DIGIT_LENGTH);
 }
 
 export function formatPhoneNumber(value: string): string {
@@ -39,3 +54,4 @@ export function getCustomerWhatsAppUrl(
 }
 
 export const PHONE_MASK_PLACEHOLDER = "8888-8888";
+export const PHONE_COUNTRY_PREFIX = "+506";

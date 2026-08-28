@@ -1,28 +1,27 @@
 import { z } from "zod";
 import {
-  extractPhoneDigits,
   formatPhoneNumber,
   isValidPhoneNumber,
 } from "@/lib/customers/phone";
 
 export const customerFormSchema = z.object({
-  name: z.string().trim().min(1, "Name is required"),
+  name: z.string().trim().min(1, "El nombre es requerido"),
   identification: z.string().trim().optional(),
   customer_type_id: z.coerce
     .number()
     .int()
-    .positive("Customer type is required"),
+    .positive("El tipo de cliente es requerido"),
   email: z
     .string()
     .trim()
-    .email("Enter a valid email address")
+    .email("Ingrese un correo válido")
     .optional()
     .or(z.literal("")),
   phone: z
     .string()
     .trim()
-    .min(1, "Phone number is required")
-    .refine(isValidPhoneNumber, "Enter an 8-digit phone number"),
+    .min(1, "El teléfono es requerido")
+    .refine(isValidPhoneNumber, "Ingrese un teléfono de 8 dígitos"),
   notes: z.string().trim().optional(),
 });
 
