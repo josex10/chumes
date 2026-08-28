@@ -60,12 +60,18 @@ export function getAllowedTransitions(currentStatusCode: string): string[] {
 export function withLostArchiveAtEnd<T extends { code: string }>(
   statuses: T[],
   allStatuses: T[],
+  extraArchiveCodes: readonly string[] = [],
 ): T[] {
-  const withoutLost = statuses.filter(
-    (status) => status.code !== EVENT_STATUS.LOST,
+  const archiveCodes = [...extraArchiveCodes, EVENT_STATUS.LOST];
+  const archiveSet = new Set(archiveCodes);
+  const withoutArchives = statuses.filter(
+    (status) => !archiveSet.has(status.code),
   );
-  const lost = allStatuses.find((status) => status.code === EVENT_STATUS.LOST);
-  return lost ? [...withoutLost, lost] : withoutLost;
+  const archives = archiveCodes
+    .map((code) => allStatuses.find((status) => status.code === code))
+    .filter((status): status is T => Boolean(status));
+
+  return [...withoutArchives, ...archives];
 }
 
 export function getStatusActionLabel(statusCode: string): string {

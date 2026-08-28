@@ -14,6 +14,7 @@ import {
 import { updateEventStatus } from "@/lib/events/actions";
 import {
   EVENT_PHASE,
+  EVENT_STATUS,
   EVENTS_PIPELINE_TAB,
   type EventsPipelineTab,
 } from "@/lib/events/constants";
@@ -73,8 +74,13 @@ export function EventsKanbanBoard({
   const isCommercial = pipelineTab === EVENTS_PIPELINE_TAB.COMMERCIAL;
   const activeStatuses = isCommercial ? commercialStatuses : operationalStatuses;
   const selectableStatuses = useMemo(
-    () => withLostArchiveAtEnd(activeStatuses, statuses),
-    [activeStatuses, statuses],
+    () =>
+      withLostArchiveAtEnd(
+        activeStatuses,
+        statuses,
+        isCommercial ? [] : [EVENT_STATUS.WON_ARCHIVED],
+      ),
+    [activeStatuses, isCommercial, statuses],
   );
 
   useEffect(() => {

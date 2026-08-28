@@ -43,14 +43,15 @@ function getSelectableStatuses(
 ): EventStatus[] {
   const pipelineStatuses = allStatuses.filter(
     (status) =>
-      status.code === currentStatusCode ||
-      status.phase === currentPhase ||
-      (currentPhase === EVENT_PHASE.OPERATIONAL &&
-        status.code === EVENT_STATUS.WON_ARCHIVED &&
-        canTransitionStatus(currentStatusCode, status.code)),
+      status.code === currentStatusCode || status.phase === currentPhase,
   );
+  const extraArchives =
+    currentPhase === EVENT_PHASE.OPERATIONAL &&
+    canTransitionStatus(currentStatusCode, EVENT_STATUS.WON_ARCHIVED)
+      ? [EVENT_STATUS.WON_ARCHIVED]
+      : [];
 
-  return withLostArchiveAtEnd(pipelineStatuses, allStatuses);
+  return withLostArchiveAtEnd(pipelineStatuses, allStatuses, extraArchives);
 }
 
 export default async function EventDetailPage({ params }: EventDetailPageProps) {

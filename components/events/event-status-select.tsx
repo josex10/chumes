@@ -2,8 +2,11 @@
 
 import { useState } from "react";
 import { Check, ChevronDown, Loader2 } from "lucide-react";
-import { ArchiveLostDialog } from "@/components/events/archive-lost-dialog";
-import { EVENT_STATUS } from "@/lib/events/constants";
+import {
+  ArchiveEventDialog,
+  type ArchiveEventKind,
+} from "@/components/events/archive-lost-dialog";
+import { EVENT_STATUS, isArchivedStatus } from "@/lib/events/constants";
 import { getEventStatusVisual } from "@/components/events/event-status-style";
 import {
   Popover,
@@ -31,7 +34,9 @@ export function EventStatusSelect({
   size = "card",
 }: EventStatusSelectProps) {
   const [open, setOpen] = useState(false);
-  const [confirmLost, setConfirmLost] = useState(false);
+  const [confirmArchive, setConfirmArchive] = useState<ArchiveEventKind | null>(
+    null,
+  );
   const selected =
     statuses.find((status) => status.code === value) ?? statuses[0];
   const selectedVisual = getEventStatusVisual(selected?.code ?? value);
@@ -94,10 +99,12 @@ export function EventStatusSelect({
               const Icon = visual.icon;
               const isSelected = status.code === value;
               const isLostArchive = status.code === EVENT_STATUS.LOST;
+              const isWonArchive = status.code === EVENT_STATUS.WON_ARCHIVED;
+              const prevCode = statuses[index - 1]?.code;
               const showDivider =
-                isLostArchive &&
+                isArchivedStatus(status.code) &&
                 index > 0 &&
-                statuses[index - 1]?.code !== EVENT_STATUS.LOST;
+                !(prevCode && isArchivedStatus(prevCode));
 
               return (
                 <div key={status.code}>
@@ -111,7 +118,11 @@ export function EventStatusSelect({
                       if (isSelected) return;
                       setOpen(false);
                       if (isLostArchive) {
-                        setConfirmLost(true);
+                        setConfirmArchive("lost");
+                        return;
+                      }
+                      if (isWonArchive) {
+                        setConfirmArchive("won");
                         return;
                       }
                       onValueChange(status.code);
@@ -142,13 +153,23 @@ export function EventStatusSelect({
           </div>
         </PopoverContent>
       </Popover>
-      <ArchiveLostDialog
-        open={confirmLost}
-        onOpenChange={setConfirmLost}
+      <ArchiveEventDialog
+        kind={confirmArchive ?? "lost"}
+        open={confirmArchive !== null}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen) setConfirmArchive(null);
+        }}
         pending={pending}
         onConfirm={() => {
-          setConfirmLost(false);
-          onValueChange(EVENT_STATUS.LOST);
+          const kind = confirmArchive;
+          setConfirmArchive(null);
+          if (kind === "won") {
+            onValueChange(EVENT_STATUS.WON_ARCHIVED);
+            return;
+          }
+          if (kind === "lost") {
+            onValueChange(EVENT_STATUS.LOST);
+          }
         }}
       />
     </>
