@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { MessageCircle, Loader2 } from "lucide-react";
 import { completeEventFollowUp } from "@/lib/follow-ups/actions";
 import type { FollowUpStep } from "@/lib/follow-ups/constants";
-import { getFollowUpStepLabel } from "@/lib/follow-ups/constants";
+import { getFollowUpPhaseLabel } from "@/lib/follow-ups/constants";
 import {
   buildFollowUpTemplateVars,
   renderFollowUpTemplate,
@@ -71,11 +71,7 @@ export function SendFollowUpDialog({
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
-  const matchingTemplate =
-    templates.find((template) => template.step === context.step) ??
-    templates[0] ??
-    null;
-  const [templateId, setTemplateId] = useState(matchingTemplate?.id ?? "");
+  const [templateId, setTemplateId] = useState("");
   const vars = useMemo(
     () =>
       buildFollowUpTemplateVars({
@@ -87,27 +83,20 @@ export function SendFollowUpDialog({
       }),
     [context],
   );
-  const [message, setMessage] = useState(() =>
-    matchingTemplate ? renderFollowUpTemplate(matchingTemplate.body, vars) : "",
-  );
+  const [message, setMessage] = useState("");
 
   useEffect(() => {
     if (!open) return;
-    const nextTemplate =
-      templates.find((template) => template.step === context.step) ??
-      templates[0] ??
-      null;
-    setTemplateId(nextTemplate?.id ?? "");
-    setMessage(
-      nextTemplate ? renderFollowUpTemplate(nextTemplate.body, vars) : "",
-    );
+    setTemplateId("");
+    setMessage("");
     setError(null);
-  }, [open, context.step, templates, vars]);
+  }, [open, context.eventId, context.step]);
 
   const phoneLabel = context.phone ? formatPhoneNumber(context.phone) : null;
   const whatsappUrl = context.phone
     ? getCustomerWhatsAppUrl(context.phone, message)
     : null;
+  const selectedTemplate = templates.find((item) => item.id === templateId);
 
   function applyTemplate(nextId: string | null) {
     if (!nextId) return;
@@ -121,6 +110,11 @@ export function SendFollowUpDialog({
   function handleSend() {
     if (!whatsappUrl) {
       setError("Este cliente no tiene un teléfono válido para WhatsApp.");
+      return;
+    }
+
+    if (!message.trim()) {
+      setError("Elegí una plantilla o escribí el mensaje.");
       return;
     }
 
@@ -149,20 +143,27 @@ export function SendFollowUpDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>{getFollowUpStepLabel(context.step)}</DialogTitle>
+          <DialogTitle>Enviar seguimiento</DialogTitle>
           <DialogDescription>
             Mensaje para {context.customerName}
             {phoneLabel ? ` · ${phoneLabel}` : ""}. Se abre WhatsApp con el
-            texto listo y se registra el seguimiento.
+            texto listo y se registra este paso.
           </DialogDescription>
         </DialogHeader>
 
         <div className="grid gap-3">
+          <div className="grid gap-1.5">
+            <Label>Fase del evento</Label>
+            <p className="rounded-lg border bg-muted/40 px-3 py-2 text-sm font-medium">
+              {getFollowUpPhaseLabel(context.step)}
+            </p>
+          </div>
+
           {templates.length > 0 ? (
             <div className="grid gap-1.5">
               <Label htmlFor="follow-up-template">Plantilla</Label>
               <Select
-                value={templateId}
+                value={templateId || null}
                 onValueChange={applyTemplate}
                 items={templates.map((template) => ({
                   value: template.id,
@@ -170,7 +171,7 @@ export function SendFollowUpDialog({
                 }))}
               >
                 <SelectTrigger id="follow-up-template" className="w-full">
-                  <SelectValue placeholder="Elegir plantilla" />
+                  <SelectValue placeholder="Elegir mensaje" />
                 </SelectTrigger>
                 <SelectContent>
                   {templates.map((template) => (
@@ -180,17 +181,32 @@ export function SendFollowUpDialog({
                   ))}
                 </SelectContent>
               </Select>
+              {selectedTemplate ? (
+                <p className="text-xs text-muted-foreground">
+                  {selectedTemplate.name}
+                </p>
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  Elegí según el caso: sin cotización, cotización enviada, etc.
+                </p>
+              )}
             </div>
-          ) : null}
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              No hay plantillas activas. Creá una en Plantillas o escribí el
+              mensaje abajo.
+            </p>
+          )}
 
           <div className="grid gap-1.5">
-            <Label htmlFor="follow-up-message">Mensaje</Label>
+            <Label htmlFor="follow-up-message">Qué dice el mensaje</Label>
             <Textarea
               id="follow-up-message"
               value={message}
               onChange={(event) => setMessage(event.target.value)}
               rows={8}
               className="min-h-40"
+              placeholder="El texto aparece aquí al elegir una plantilla. Podés editarlo antes de enviar."
             />
           </div>
 

@@ -128,7 +128,7 @@ export async function getFollowUpTemplates(
     .from("follow_up_templates")
     .select("*")
     .order("sort_order")
-    .order("step");
+    .order("name");
 
   if (activeOnly) {
     builder = builder.eq("is_active", true);

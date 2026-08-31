@@ -10,6 +10,7 @@ import { getStatusPhase } from "@/lib/events/status-transitions";
 import { dateKeyToIso } from "@/lib/follow-ups/calendar";
 import {
   DEFAULT_LOST_FOLLOW_UP_REASON,
+  UNUSED_TEMPLATE_STEP,
   type FollowUpStep,
 } from "@/lib/follow-ups/constants";
 import {
@@ -228,11 +229,63 @@ export async function markEventLostFromFollowUp(
   return { success: true };
 }
 
+function revalidateTemplatePaths() {
+  revalidatePath("/seguimientos");
+  revalidatePath("/seguimientos/plantillas");
+  revalidatePath("/events");
+}
+
+export async function createFollowUpTemplate(input: {
+  name: string;
+  body: string;
+}): Promise<ActionResult> {
+  const name = input.name.trim();
+  const body = input.body.trim();
+
+  if (!name || !body) {
+    return { success: false, error: "El nombre y el mensaje son obligatorios." };
+  }
+
+  try {
+    const supabase = createAdminSupabaseClient();
+    const { data: last } = await supabase
+      .from("follow_up_templates")
+      .select("sort_order")
+      .order("sort_order", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    const { error } = await supabase.from("follow_up_templates").insert({
+      name,
+      body,
+      step: UNUSED_TEMPLATE_STEP,
+      is_active: true,
+      sort_order: (last?.sort_order ?? 0) + 10,
+    });
+
+    if (error) {
+      console.error("[createFollowUpTemplate]", error.message);
+      return { success: false, error: "No se pudo crear la plantilla." };
+    }
+
+    revalidateTemplatePaths();
+    return { success: true };
+  } catch (error) {
+    console.error("[createFollowUpTemplate]", error);
+    return {
+      success: false,
+      error:
+        error instanceof Error
+          ? error.message
+          : "No se pudo crear la plantilla.",
+    };
+  }
+}
+
 export async function updateFollowUpTemplate(input: {
   id: string;
   name: string;
   body: string;
-  step: FollowUpStep;
   isActive: boolean;
 }): Promise<ActionResult> {
   const name = input.name.trim();
@@ -249,7 +302,6 @@ export async function updateFollowUpTemplate(input: {
       .update({
         name,
         body,
-        step: input.step,
         is_active: input.isActive,
       })
       .eq("id", input.id);
@@ -259,8 +311,7 @@ export async function updateFollowUpTemplate(input: {
       return { success: false, error: "No se pudo guardar la plantilla." };
     }
 
-    revalidatePath("/seguimientos");
-    revalidatePath("/events");
+    revalidateTemplatePaths();
     return { success: true };
   } catch (error) {
     console.error("[updateFollowUpTemplate]", error);
@@ -270,6 +321,33 @@ export async function updateFollowUpTemplate(input: {
         error instanceof Error
           ? error.message
           : "No se pudo guardar la plantilla.",
+    };
+  }
+}
+
+export async function deleteFollowUpTemplate(id: string): Promise<ActionResult> {
+  try {
+    const supabase = createAdminSupabaseClient();
+    const { error } = await supabase
+      .from("follow_up_templates")
+      .delete()
+      .eq("id", id);
+
+    if (error) {
+      console.error("[deleteFollowUpTemplate]", error.message);
+      return { success: false, error: "No se pudo eliminar la plantilla." };
+    }
+
+    revalidateTemplatePaths();
+    return { success: true };
+  } catch (error) {
+    console.error("[deleteFollowUpTemplate]", error);
+    return {
+      success: false,
+      error:
+        error instanceof Error
+          ? error.message
+          : "No se pudo eliminar la plantilla.",
     };
   }
 }
