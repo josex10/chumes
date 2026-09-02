@@ -9,9 +9,13 @@ export type FollowUpQueueItem = {
   dueLabel: string;
   phone: string | null;
   quoteTotal: number | null;
+  isThisWeek: boolean;
+  cadenceLabel: string | null;
+  contactedThisWeek: boolean;
 };
 
 export type FollowUpQueue = {
+  closeThisWeek: FollowUpQueueItem[];
   step1: FollowUpQueueItem[];
   step2: FollowUpQueueItem[];
   step3: FollowUpQueueItem[];

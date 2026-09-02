@@ -488,7 +488,7 @@ export type FollowUpTemplate = {
 export type EventFollowUp = {
   id: string;
   event_id: string;
-  step: 1 | 2 | 3;
+  step: 1 | 2 | 3 | null;
   due_at: string;
   completed_at: string;
   channel: string;
@@ -1182,7 +1182,7 @@ export type Database = {
         Row: EventFollowUp;
         Insert: {
           event_id: string;
-          step: 1 | 2 | 3;
+          step?: 1 | 2 | 3 | null;
           due_at: string;
           completed_at?: string;
           channel?: string;

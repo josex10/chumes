@@ -57,3 +57,50 @@ export function formatDueLabel(dueDateKey: string, todayKey: string): string {
   if (daysUntilDue === -1) return "Ayer";
   return `Hace ${Math.abs(daysUntilDue)} días`;
 }
+
+/** Monday–Sunday date keys of the Costa Rica week containing `todayKey`. */
+export function getCostaRicaWeekBounds(todayKey = todayInCostaRica()): {
+  startKey: string;
+  endKey: string;
+} {
+  const [year, month, day] = todayKey.split("-").map(Number);
+  const dayOfWeek = new Date(Date.UTC(year, month - 1, day)).getUTCDay();
+  const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+  const startKey = addCalendarDays(todayKey, diffToMonday);
+  return { startKey, endKey: addCalendarDays(startKey, 6) };
+}
+
+export function toEventDateKey(value: string): string {
+  return value.slice(0, 10);
+}
+
+export function isDateKeyInCostaRicaWeek(
+  dateKey: string,
+  todayKey = todayInCostaRica(),
+): boolean {
+  const { startKey, endKey } = getCostaRicaWeekBounds(todayKey);
+  return dateKey >= startKey && dateKey <= endKey;
+}
+
+export function formatWeekEventDateLabel(
+  dateKey: string,
+  todayKey: string,
+): string {
+  const daysUntil = diffCalendarDays(todayKey, dateKey);
+
+  if (daysUntil === 0) return "Hoy";
+  if (daysUntil === 1) return "Mañana";
+  if (daysUntil === -1) return "Ayer";
+  if (daysUntil < -1) return `Hace ${Math.abs(daysUntil)} días`;
+
+  const [year, month, day] = dateKey.split("-").map(Number);
+  return new Date(Date.UTC(year, month - 1, day, 12)).toLocaleDateString(
+    "es-CR",
+    {
+      timeZone: "UTC",
+      weekday: "short",
+      day: "numeric",
+      month: "short",
+    },
+  );
+}

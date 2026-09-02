@@ -23,7 +23,7 @@ import {
   pauseEventFollowUp,
   resumeEventFollowUp,
 } from "@/lib/follow-ups/actions";
-import { getFollowUpStepLabel } from "@/lib/follow-ups/constants";
+import { getFollowUpLogLabel } from "@/lib/follow-ups/constants";
 import { formatDateKey, toCostaRicaDateKey } from "@/lib/follow-ups/calendar";
 import type { FollowUpProgress } from "@/lib/follow-ups/schedule";
 import type {
@@ -151,7 +151,7 @@ export function EventFollowUpsCard({
                 {followUps.map((item) => (
                   <TableRow key={item.id}>
                     <TableCell className="font-medium">
-                      {getFollowUpStepLabel(item.step)}
+                      {getFollowUpLogLabel(item.step)}
                     </TableCell>
                     <TableCell>
                       {formatDateKey(toCostaRicaDateKey(item.completed_at))}

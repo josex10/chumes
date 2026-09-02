@@ -1,7 +1,7 @@
 import {
   FOLLOW_UP_BUCKET,
   FOLLOW_UP_DELAYS,
-  type FollowUpBucket,
+  getFollowUpStepLabel,
   type FollowUpStep,
 } from "@/lib/follow-ups/constants";
 import {
@@ -11,7 +11,7 @@ import {
 } from "@/lib/follow-ups/calendar";
 
 export type CompletedFollowUp = {
-  step: number;
+  step: number | null;
   completed_at: string;
 };
 
@@ -21,7 +21,10 @@ export type FollowUpProgress =
     }
   | {
       kind: "pending";
-      bucket: Exclude<FollowUpBucket, "NO_RESPONSE">;
+      bucket:
+        | typeof FOLLOW_UP_BUCKET.STEP_1
+        | typeof FOLLOW_UP_BUCKET.STEP_2
+        | typeof FOLLOW_UP_BUCKET.STEP_3;
       step: FollowUpStep;
       dueDateKey: string;
     }
@@ -31,12 +34,17 @@ export type FollowUpProgress =
       dueDateKey: string;
     };
 
+function isCadenceStep(step: number | null): step is FollowUpStep {
+  return step === 1 || step === 2 || step === 3;
+}
+
 function latestByStep(
   completed: CompletedFollowUp[],
-): Map<number, CompletedFollowUp> {
-  const byStep = new Map<number, CompletedFollowUp>();
+): Map<FollowUpStep, CompletedFollowUp> {
+  const byStep = new Map<FollowUpStep, CompletedFollowUp>();
 
   for (const item of completed) {
+    if (!isCadenceStep(item.step)) continue;
     const current = byStep.get(item.step);
     if (!current || item.completed_at > current.completed_at) {
       byStep.set(item.step, item);
@@ -99,6 +107,19 @@ export function getFollowUpProgress(
       FOLLOW_UP_DELAYS.NO_RESPONSE,
     ),
   };
+}
+
+export function getFollowUpCadenceLabel(
+  progress: FollowUpProgress,
+  todayKey: string,
+): string {
+  if (progress.kind === "paused") return "Pausado";
+  if (progress.kind === "pending") {
+    if (progress.dueDateKey > todayKey) return "Aún no toca";
+    return getFollowUpStepLabel(progress.step);
+  }
+  if (progress.dueDateKey > todayKey) return "Aún no toca";
+  return "Sin respuesta";
 }
 
 export function getNextFollowUpDateKey(progress: FollowUpProgress): string | null {

@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { MessageCircle, Loader2 } from "lucide-react";
-import { completeEventFollowUp } from "@/lib/follow-ups/actions";
+import { completeEventFollowUp, logAdHocFollowUp } from "@/lib/follow-ups/actions";
 import type { FollowUpStep } from "@/lib/follow-ups/constants";
 import { getFollowUpPhaseLabel } from "@/lib/follow-ups/constants";
 import {
@@ -36,7 +36,7 @@ import type { FollowUpTemplate } from "@/lib/supabase/types";
 
 export type FollowUpMessageContext = {
   eventId: string;
-  step: FollowUpStep;
+  step?: FollowUpStep | null;
   customerName: string;
   eventTitle: string;
   eventDate: string | null;
@@ -92,6 +92,7 @@ export function SendFollowUpDialog({
     setError(null);
   }, [open, context.eventId, context.step]);
 
+  const isAdHoc = !context.step;
   const phoneLabel = context.phone ? formatPhoneNumber(context.phone) : null;
   const whatsappUrl = context.phone
     ? getCustomerWhatsAppUrl(context.phone, message)
@@ -122,12 +123,18 @@ export function SendFollowUpDialog({
     openWhatsApp(whatsappUrl);
 
     startTransition(async () => {
-      const result = await completeEventFollowUp({
-        eventId: context.eventId,
-        step: context.step,
-        templateId: templateId || null,
-        messageBody: message,
-      });
+      const result = isAdHoc
+        ? await logAdHocFollowUp({
+            eventId: context.eventId,
+            templateId: templateId || null,
+            messageBody: message,
+          })
+        : await completeEventFollowUp({
+            eventId: context.eventId,
+            step: context.step!,
+            templateId: templateId || null,
+            messageBody: message,
+          });
 
       if (!result.success) {
         setError(result.error);
@@ -143,21 +150,28 @@ export function SendFollowUpDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Enviar seguimiento</DialogTitle>
+          <DialogTitle>
+            {isAdHoc ? "WhatsApp — esta semana" : "Enviar seguimiento"}
+          </DialogTitle>
           <DialogDescription>
             Mensaje para {context.customerName}
             {phoneLabel ? ` · ${phoneLabel}` : ""}. Se abre WhatsApp con el
-            texto listo y se registra este paso.
+            texto listo
+            {isAdHoc
+              ? " y se registra el contacto, sin avanzar el paso de seguimiento."
+              : " y se registra este paso."}
           </DialogDescription>
         </DialogHeader>
 
         <div className="grid gap-3">
-          <div className="grid gap-1.5">
-            <Label>Fase del evento</Label>
-            <p className="rounded-lg border bg-muted/40 px-3 py-2 text-sm font-medium">
-              {getFollowUpPhaseLabel(context.step)}
-            </p>
-          </div>
+          {context.step ? (
+            <div className="grid gap-1.5">
+              <Label>Fase del evento</Label>
+              <p className="rounded-lg border bg-muted/40 px-3 py-2 text-sm font-medium">
+                {getFollowUpPhaseLabel(context.step)}
+              </p>
+            </div>
+          ) : null}
 
           {templates.length > 0 ? (
             <div className="grid gap-1.5">

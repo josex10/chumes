@@ -140,6 +140,79 @@ export async function completeEventFollowUp(input: {
   }
 }
 
+export async function logAdHocFollowUp(input: {
+  eventId: string;
+  templateId?: string | null;
+  messageBody: string;
+}): Promise<ActionResult> {
+  const messageBody = input.messageBody.trim();
+  if (!messageBody) {
+    return { success: false, error: "El mensaje no puede estar vacío." };
+  }
+
+  try {
+    const { userId } = await auth();
+    const supabase = createAdminSupabaseClient();
+    const event = await getEventById(input.eventId);
+
+    if (!event) {
+      return { success: false, error: "Evento no encontrado." };
+    }
+
+    if (getStatusPhase(event.event_statuses.code) !== EVENT_PHASE.COMMERCIAL) {
+      return {
+        success: false,
+        error: "Solo se dan seguimientos a eventos comerciales.",
+      };
+    }
+
+    const now = new Date().toISOString();
+    const { error } = await supabase.from("event_follow_ups").insert({
+      event_id: event.id,
+      step: null,
+      due_at: now,
+      completed_at: now,
+      channel: "whatsapp",
+      template_id: input.templateId || null,
+      message_body: messageBody,
+      created_by: userId,
+    });
+
+    if (error) {
+      console.error("[logAdHocFollowUp]", error.message);
+      return { success: false, error: "No se pudo registrar el contacto." };
+    }
+
+    const { error: updateError } = await supabase
+      .from("events")
+      .update({
+        last_contact_at: now,
+        updated_by: userId,
+      })
+      .eq("id", event.id);
+
+    if (updateError) {
+      console.error("[logAdHocFollowUp update]", updateError.message);
+      return {
+        success: false,
+        error: "El WhatsApp se puede enviar, pero no se actualizó el evento.",
+      };
+    }
+
+    revalidateFollowUpPaths(event.id);
+    return { success: true };
+  } catch (error) {
+    console.error("[logAdHocFollowUp]", error);
+    return {
+      success: false,
+      error:
+        error instanceof Error
+          ? error.message
+          : "No se pudo registrar el contacto.",
+    };
+  }
+}
+
 export async function pauseEventFollowUp(eventId: string): Promise<ActionResult> {
   try {
     const { userId } = await auth();

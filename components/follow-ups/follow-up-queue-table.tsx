@@ -4,6 +4,8 @@ import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
+  CalendarClock,
+  Check,
   CircleAlert,
   Eye,
   Flame,
@@ -35,7 +37,25 @@ import type { FollowUpQueueItem } from "@/lib/follow-ups/types";
 import type { FollowUpTemplate } from "@/lib/supabase/types";
 import { cn } from "@/lib/utils";
 
+const THIS_WEEK_PILL =
+  "inline-flex items-center rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium text-emerald-800 dark:text-emerald-300";
+
+const CONTACTED_PILL =
+  "inline-flex items-center gap-1 rounded-full border border-sky-500/40 bg-sky-500/10 px-2 py-0.5 text-[11px] font-medium text-sky-800 dark:text-sky-300";
+
+const CADENCE_PILL =
+  "inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium text-muted-foreground";
+
 const BUCKET_META = {
+  [FOLLOW_UP_BUCKET.CLOSE_THIS_WEEK]: {
+    title: "Cerrar esta semana",
+    description:
+      "Eventos comerciales con fecha esta semana. Prioridad de cierre.",
+    icon: CalendarClock,
+    accent:
+      "border-emerald-500/40 bg-emerald-500/10 text-emerald-800 dark:text-emerald-300",
+    iconClass: "text-emerald-600 dark:text-emerald-400",
+  },
   [FOLLOW_UP_BUCKET.STEP_1]: {
     title: "Primer seguimiento",
     description: "3 días después de creado el evento.",
@@ -72,11 +92,14 @@ type FollowUpQueueTableProps = {
   templates: FollowUpTemplate[];
 };
 
-function toMessageContext(item: FollowUpQueueItem): FollowUpMessageContext | null {
-  if (!item.step) return null;
+function toMessageContext(
+  item: FollowUpQueueItem,
+  adHoc: boolean,
+): FollowUpMessageContext | null {
+  if (!adHoc && !item.step) return null;
   return {
     eventId: item.event.id,
-    step: item.step,
+    step: adHoc ? null : item.step,
     customerName: item.event.customers.name,
     eventTitle: item.event.title,
     eventDate: item.event.event_date,
@@ -98,7 +121,10 @@ export function FollowUpQueueTable({
   const [lostEventId, setLostEventId] = useState<string | null>(null);
   const meta = BUCKET_META[bucket];
   const Icon = meta.icon;
-  const sendContext = sendItem ? toMessageContext(sendItem) : null;
+  const isCloseThisWeek = bucket === FOLLOW_UP_BUCKET.CLOSE_THIS_WEEK;
+  const sendContext = sendItem
+    ? toMessageContext(sendItem, isCloseThisWeek)
+    : null;
 
   function handlePause(eventId: string) {
     setError(null);
@@ -152,7 +178,9 @@ export function FollowUpQueueTable({
 
       {items.length === 0 ? (
         <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
-          No hay {meta.title.toLowerCase()} pendientes para hoy.
+          {isCloseThisWeek
+            ? "No hay eventos comerciales con fecha esta semana."
+            : `No hay ${meta.title.toLowerCase()} pendientes para hoy.`}
         </div>
       ) : (
         <div className="rounded-lg border">
@@ -163,7 +191,7 @@ export function FollowUpQueueTable({
                 <TableHead>Evento</TableHead>
                 <TableHead>Teléfono</TableHead>
                 <TableHead>Estado</TableHead>
-                <TableHead>Vencimiento</TableHead>
+                <TableHead>{isCloseThisWeek ? "Fecha" : "Vencimiento"}</TableHead>
                 <TableHead className="text-right">Acciones</TableHead>
               </TableRow>
             </TableHeader>
@@ -174,19 +202,42 @@ export function FollowUpQueueTable({
                 const formattedPhone = item.phone
                   ? formatPhoneNumber(item.phone)
                   : null;
+                const isOverdue =
+                  item.dueLabel.startsWith("Hace") || item.dueLabel === "Ayer";
 
                 return (
-                  <TableRow key={item.event.id}>
+                  <TableRow
+                    key={item.event.id}
+                    className={
+                      isCloseThisWeek && item.contactedThisWeek
+                        ? "opacity-60"
+                        : undefined
+                    }
+                  >
                     <TableCell className="font-medium">
                       {item.event.customers.name}
                     </TableCell>
                     <TableCell>
-                      <Link
-                        href={`/events/${item.event.id}`}
-                        className="hover:underline"
-                      >
-                        {item.event.title}
-                      </Link>
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <Link
+                          href={`/events/${item.event.id}`}
+                          className="hover:underline"
+                        >
+                          {item.event.title}
+                        </Link>
+                        {item.isThisWeek && !isCloseThisWeek ? (
+                          <span className={THIS_WEEK_PILL}>Esta semana</span>
+                        ) : null}
+                        {item.cadenceLabel ? (
+                          <span className={CADENCE_PILL}>{item.cadenceLabel}</span>
+                        ) : null}
+                        {isCloseThisWeek && item.contactedThisWeek ? (
+                          <span className={CONTACTED_PILL}>
+                            <Check className="size-3" />
+                            Contactado
+                          </span>
+                        ) : null}
+                      </div>
                     </TableCell>
                     <TableCell className="tabular-nums">
                       {formattedPhone ?? "—"}
@@ -206,10 +257,11 @@ export function FollowUpQueueTable({
                       <span
                         className={cn(
                           "text-sm font-medium",
-                          item.dueLabel.startsWith("Hace") ||
-                            item.dueLabel === "Ayer"
+                          isOverdue
                             ? "text-rose-700 dark:text-rose-300"
-                            : "text-foreground",
+                            : isCloseThisWeek && item.dueLabel === "Hoy"
+                              ? "text-emerald-700 dark:text-emerald-300"
+                              : "text-foreground",
                         )}
                       >
                         {item.dueLabel}
@@ -217,7 +269,7 @@ export function FollowUpQueueTable({
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-1.5">
-                        {item.step ? (
+                        {item.step || isCloseThisWeek ? (
                           <Button
                             type="button"
                             size="sm"
@@ -234,7 +286,8 @@ export function FollowUpQueueTable({
                             WhatsApp
                           </Button>
                         ) : null}
-                        {bucket !== FOLLOW_UP_BUCKET.NO_RESPONSE ? (
+                        {isCloseThisWeek ? null : bucket !==
+                          FOLLOW_UP_BUCKET.NO_RESPONSE ? (
                           <Button
                             type="button"
                             size="sm"
@@ -302,6 +355,7 @@ export function FollowUpQueueSummary({
   counts,
 }: {
   counts: {
+    closeThisWeek: number;
     step1: number;
     step2: number;
     step3: number;
@@ -309,6 +363,7 @@ export function FollowUpQueueSummary({
   };
 }) {
   const cards = [
+    { bucket: FOLLOW_UP_BUCKET.CLOSE_THIS_WEEK, count: counts.closeThisWeek },
     { bucket: FOLLOW_UP_BUCKET.STEP_1, count: counts.step1 },
     { bucket: FOLLOW_UP_BUCKET.STEP_2, count: counts.step2 },
     { bucket: FOLLOW_UP_BUCKET.STEP_3, count: counts.step3 },
@@ -316,7 +371,7 @@ export function FollowUpQueueSummary({
   ] as const;
 
   return (
-    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
       {cards.map(({ bucket, count }) => {
         const meta = BUCKET_META[bucket];
         const Icon = meta.icon;

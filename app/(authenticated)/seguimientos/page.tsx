@@ -28,10 +28,11 @@ export default async function SeguimientosPage() {
           <h1 className="inline-flex items-center gap-1.5 text-3xl font-semibold tracking-tight">
             <MessageCircleMore className="size-7 text-muted-foreground" />
             Seguimientos
-            <EventsHint description="Cola de contactos para hoy y vencidos. El kanban no se mueve al escribirle al cliente." />
+            <EventsHint description="Cola de contactos para hoy y vencidos, más eventos comerciales con fecha esta semana. El kanban no se mueve al escribirle al cliente." />
           </h1>
           <p className="mt-2 text-muted-foreground">
-            Estos son los clientes a los que deberías escribirles hoy.
+            Estos son los clientes a los que deberías escribirles hoy, y los
+            eventos de esta semana aún sin cerrar.
           </p>
         </div>
         <Link
@@ -48,6 +49,7 @@ export default async function SeguimientosPage() {
 
       <FollowUpQueueSummary
         counts={{
+          closeThisWeek: queue.closeThisWeek.length,
           step1: queue.step1.length,
           step2: queue.step2.length,
           step3: queue.step3.length,
@@ -55,6 +57,11 @@ export default async function SeguimientosPage() {
         }}
       />
 
+      <FollowUpQueueTable
+        items={queue.closeThisWeek}
+        bucket={FOLLOW_UP_BUCKET.CLOSE_THIS_WEEK}
+        templates={templates}
+      />
       <FollowUpQueueTable
         items={queue.step1}
         bucket={FOLLOW_UP_BUCKET.STEP_1}

@@ -6,6 +6,7 @@ export const FOLLOW_UP_DELAYS = {
 } as const;
 
 export const FOLLOW_UP_BUCKET = {
+  CLOSE_THIS_WEEK: "CLOSE_THIS_WEEK",
   STEP_1: "STEP_1",
   STEP_2: "STEP_2",
   STEP_3: "STEP_3",
@@ -33,6 +34,11 @@ export function getFollowUpStepLabel(step: FollowUpStep): string {
     case 3:
       return "Tercer seguimiento";
   }
+}
+
+export function getFollowUpLogLabel(step: FollowUpStep | null): string {
+  if (step == null) return "Esta semana";
+  return getFollowUpStepLabel(step);
 }
 
 export function getFollowUpPhaseLabel(step: FollowUpStep): string {
