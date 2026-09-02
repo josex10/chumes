@@ -1,6 +1,8 @@
+import { getBankAccounts } from "@/lib/bank-accounts/queries";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import { calculatePaymentSummary } from "@/lib/payments/calculations";
 import type {
+  BankAccount,
   EventFinancialMovementWithRelations,
   PaymentMethod,
   PaymentSummary,
@@ -8,7 +10,8 @@ import type {
 
 const MOVEMENT_SELECT = `
   *,
-  payment_methods(*)
+  payment_methods(*),
+  bank_accounts(*)
 `;
 
 async function getLinkedQuoteTotal(eventId: string): Promise<number | null> {
@@ -142,12 +145,18 @@ export async function attachPaymentSummariesToEvents(
   return summaries;
 }
 
-export async function getEventPaymentData(eventId: string) {
-  const [movements, summary, paymentMethods] = await Promise.all([
+export async function getEventPaymentData(eventId: string): Promise<{
+  movements: EventFinancialMovementWithRelations[];
+  summary: PaymentSummary | null;
+  paymentMethods: PaymentMethod[];
+  bankAccounts: BankAccount[];
+}> {
+  const [movements, summary, paymentMethods, bankAccounts] = await Promise.all([
     getEventFinancialMovements(eventId),
     getEventPaymentSummary(eventId),
     getPaymentMethods(),
+    getBankAccounts(),
   ]);
 
-  return { movements, summary, paymentMethods };
+  return { movements, summary, paymentMethods, bankAccounts };
 }

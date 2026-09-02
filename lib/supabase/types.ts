@@ -389,6 +389,20 @@ export type PaymentMethod = {
   updated_at: string;
 };
 
+export type BankAccountKind = "OPERATING" | "ADVANCES";
+
+export type BankAccount = {
+  id: number;
+  name: string;
+  bank_name: string;
+  account_number: string;
+  kind: BankAccountKind;
+  is_active: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+};
+
 export type FinancialMovementType = "ADVANCE" | "REFUND";
 
 export type EventFinancialMovement = {
@@ -397,6 +411,7 @@ export type EventFinancialMovement = {
   movement_type: FinancialMovementType;
   amount: number;
   payment_method_id: number;
+  bank_account_id: number | null;
   movement_date: string;
   notes: string | null;
   created_at: string;
@@ -407,6 +422,7 @@ export type EventFinancialMovement = {
 
 export type EventFinancialMovementWithRelations = EventFinancialMovement & {
   payment_methods: PaymentMethod;
+  bank_accounts: BankAccount | null;
 };
 
 export type PaymentStatus = "PAID" | "PENDING";
@@ -1024,6 +1040,19 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["payment_methods"]["Insert"]>;
         Relationships: [];
       };
+      bank_accounts: {
+        Row: BankAccount;
+        Insert: {
+          name: string;
+          bank_name: string;
+          account_number: string;
+          kind: BankAccountKind;
+          is_active?: boolean;
+          sort_order?: number;
+        };
+        Update: Partial<Database["public"]["Tables"]["bank_accounts"]["Insert"]>;
+        Relationships: [];
+      };
       event_financial_movements: {
         Row: EventFinancialMovement;
         Insert: {
@@ -1031,6 +1060,7 @@ export type Database = {
           movement_type: FinancialMovementType;
           amount: number;
           payment_method_id: number;
+          bank_account_id?: number | null;
           movement_date?: string;
           notes?: string | null;
           created_by?: string | null;
@@ -1050,6 +1080,12 @@ export type Database = {
             foreignKeyName: "event_financial_movements_payment_method_id_fkey";
             columns: ["payment_method_id"];
             referencedRelation: "payment_methods";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "event_financial_movements_bank_account_id_fkey";
+            columns: ["bank_account_id"];
+            referencedRelation: "bank_accounts";
             referencedColumns: ["id"];
           },
         ];

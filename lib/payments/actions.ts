@@ -115,6 +115,28 @@ async function validatePaymentMethod(
   return null;
 }
 
+async function validateBankAccount(
+  bankAccountId: number,
+  options?: { allowInactiveId?: number | null },
+): Promise<ActionResult | null> {
+  const supabase = createAdminSupabaseClient();
+  const { data, error } = await supabase
+    .from("bank_accounts")
+    .select("id, is_active")
+    .eq("id", bankAccountId)
+    .maybeSingle();
+
+  if (error || !data) {
+    return { success: false, error: "Cuenta no válida." };
+  }
+
+  if (!data.is_active && data.id !== options?.allowInactiveId) {
+    return { success: false, error: "La cuenta está inactiva." };
+  }
+
+  return null;
+}
+
 function revalidateEventPaths(eventId: string) {
   revalidatePath("/events");
   revalidatePath(`/events/${eventId}`);
@@ -142,6 +164,9 @@ export async function createAdvance(
   const methodError = await validatePaymentMethod(parsed.data.payment_method_id);
   if (methodError) return methodError;
 
+  const accountError = await validateBankAccount(parsed.data.bank_account_id);
+  if (accountError) return accountError;
+
   let movementDate: string;
   try {
     movementDate = toMovementDateIso(parsed.data.movement_date);
@@ -157,6 +182,7 @@ export async function createAdvance(
     movement_type: FINANCIAL_MOVEMENT_TYPE.ADVANCE,
     amount: parsed.data.amount,
     payment_method_id: parsed.data.payment_method_id,
+    bank_account_id: parsed.data.bank_account_id,
     movement_date: movementDate,
     notes: parsed.data.notes?.trim() || null,
     created_by: userId,
@@ -194,6 +220,9 @@ export async function createRefund(
   const methodError = await validatePaymentMethod(parsed.data.payment_method_id);
   if (methodError) return methodError;
 
+  const accountError = await validateBankAccount(parsed.data.bank_account_id);
+  if (accountError) return accountError;
+
   let movementDate: string;
   try {
     movementDate = toMovementDateIso(parsed.data.movement_date);
@@ -209,6 +238,7 @@ export async function createRefund(
     movement_type: FINANCIAL_MOVEMENT_TYPE.REFUND,
     amount: parsed.data.amount,
     payment_method_id: parsed.data.payment_method_id,
+    bank_account_id: parsed.data.bank_account_id,
     movement_date: movementDate,
     notes: parsed.data.notes?.trim() || null,
     created_by: userId,
@@ -251,13 +281,18 @@ export async function updateMovement(
 
   const { data: existing, error: existingError } = await supabase
     .from("event_financial_movements")
-    .select("event_id")
+    .select("event_id, bank_account_id")
     .eq("id", movementId)
     .maybeSingle();
 
   if (existingError || !existing) {
     return { success: false, error: "Movimiento no encontrado." };
   }
+
+  const accountError = await validateBankAccount(parsed.data.bank_account_id, {
+    allowInactiveId: existing.bank_account_id,
+  });
+  if (accountError) return accountError;
 
   const accessError = await validatePaymentMutation(
     existing.event_id,
@@ -274,6 +309,7 @@ export async function updateMovement(
       movement_type: parsed.data.movement_type,
       amount: parsed.data.amount,
       payment_method_id: parsed.data.payment_method_id,
+      bank_account_id: parsed.data.bank_account_id,
       movement_date: movementDate,
       notes: parsed.data.notes?.trim() || null,
       updated_by: userId,

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useForm, Controller, type Control, type FieldErrors, type UseFormRegister } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -29,13 +30,23 @@ import {
   type RefundFormValues,
   type UpdateMovementFormValues,
 } from "@/lib/payments/schema";
+import {
+  formatBankAccountLabel,
+  formatBankAccountShort,
+  selectableBankAccounts,
+} from "@/lib/bank-accounts/format";
+import {
+  BANK_ACCOUNT_KIND,
+  BANK_ACCOUNT_KIND_LABELS,
+} from "@/lib/bank-accounts/constants";
 import { formatCurrency } from "@/lib/quotes/format";
 import type {
+  BankAccount,
   EventFinancialMovementWithRelations,
   PaymentMethod,
   PaymentSummary,
 } from "@/lib/supabase/types";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -57,7 +68,9 @@ import {
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
@@ -77,6 +90,7 @@ type EventPaymentsPanelProps = {
   summary: PaymentSummary;
   movements: EventFinancialMovementWithRelations[];
   paymentMethods: PaymentMethod[];
+  bankAccounts: BankAccount[];
 };
 
 type FormMode =
@@ -147,6 +161,97 @@ function PaymentMethodSelect({
   );
 }
 
+function BankAccountSelect({
+  value,
+  onChange,
+  bankAccounts,
+  currentAccountId,
+  label,
+  error,
+}: {
+  value: number | undefined;
+  onChange: (value: number) => void;
+  bankAccounts: BankAccount[];
+  currentAccountId?: number | null;
+  label: string;
+  error?: string;
+}) {
+  const options = useMemo(
+    () => selectableBankAccounts(bankAccounts, currentAccountId),
+    [bankAccounts, currentAccountId],
+  );
+  const operating = options.filter(
+    (account) => account.kind === BANK_ACCOUNT_KIND.OPERATING,
+  );
+  const advances = options.filter(
+    (account) => account.kind === BANK_ACCOUNT_KIND.ADVANCES,
+  );
+  const items = useMemo(
+    () =>
+      options.map((account) => ({
+        value: String(account.id),
+        label: formatBankAccountLabel(account),
+      })),
+    [options],
+  );
+
+  if (options.length === 0) {
+    return (
+      <div className="space-y-2">
+        <Label>{label}</Label>
+        <p className="text-sm text-muted-foreground">
+          No hay cuentas activas.{" "}
+          <Link
+            href="/events/settings/accounts/new"
+            className={cn(buttonVariants({ variant: "link" }), "h-auto p-0")}
+          >
+            Crear una cuenta
+          </Link>
+        </p>
+        {error ? <p className="text-sm text-destructive">{error}</p> : null}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      <Label htmlFor="bank_account_id">{label}</Label>
+      <Select
+        value={value ? String(value) : null}
+        onValueChange={(next) => next && onChange(Number(next))}
+        items={items}
+      >
+        <SelectTrigger id="bank_account_id" className="w-full">
+          <SelectValue placeholder="Seleccionar" />
+        </SelectTrigger>
+        <SelectContent>
+          {operating.length > 0 ? (
+            <SelectGroup>
+              <SelectLabel>{BANK_ACCOUNT_KIND_LABELS.OPERATING}</SelectLabel>
+              {operating.map((account) => (
+                <SelectItem key={account.id} value={String(account.id)}>
+                  {formatBankAccountLabel(account)}
+                </SelectItem>
+              ))}
+            </SelectGroup>
+          ) : null}
+          {advances.length > 0 ? (
+            <SelectGroup>
+              <SelectLabel>{BANK_ACCOUNT_KIND_LABELS.ADVANCES}</SelectLabel>
+              {advances.map((account) => (
+                <SelectItem key={account.id} value={String(account.id)}>
+                  {formatBankAccountLabel(account)}
+                </SelectItem>
+              ))}
+            </SelectGroup>
+          ) : null}
+        </SelectContent>
+      </Select>
+      {error ? <p className="text-sm text-destructive">{error}</p> : null}
+    </div>
+  );
+}
+
 function AmountPresetButtons({
   balanceDue,
   onSelect,
@@ -198,6 +303,9 @@ function MovementFields({
   control,
   errors,
   paymentMethods,
+  bankAccounts,
+  accountFieldLabel,
+  currentAccountId,
   showTypeField,
   movementTypeControl,
   amountPresets,
@@ -206,6 +314,9 @@ function MovementFields({
   control: Control<SharedMovementValues>;
   errors: FieldErrors<SharedMovementValues>;
   paymentMethods: PaymentMethod[];
+  bankAccounts: BankAccount[];
+  accountFieldLabel: string;
+  currentAccountId?: number | null;
   showTypeField?: boolean;
   movementTypeControl?: Control<UpdateMovementFormValues>;
   amountPresets?: {
@@ -292,6 +403,21 @@ function MovementFields({
         )}
       />
 
+      <Controller
+        control={control}
+        name="bank_account_id"
+        render={({ field }) => (
+          <BankAccountSelect
+            value={field.value}
+            onChange={field.onChange}
+            bankAccounts={bankAccounts}
+            currentAccountId={currentAccountId}
+            label={accountFieldLabel}
+            error={errors.bank_account_id?.message}
+          />
+        )}
+      />
+
       <div className="space-y-2">
         <Label htmlFor="movement_date">Fecha</Label>
         <Input
@@ -316,11 +442,13 @@ function CreateAdvanceDialog({
   eventId,
   balanceDue,
   paymentMethods,
+  bankAccounts,
   onClose,
 }: {
   eventId: string;
   balanceDue: number;
   paymentMethods: PaymentMethod[];
+  bankAccounts: BankAccount[];
   onClose: () => void;
 }) {
   const router = useRouter();
@@ -332,6 +460,7 @@ function CreateAdvanceDialog({
     defaultValues: {
       amount: undefined,
       payment_method_id: paymentMethods[0]?.id,
+      bank_account_id: undefined,
       movement_date: defaultDatetimeLocalValue(),
       notes: "",
     },
@@ -366,6 +495,8 @@ function CreateAdvanceDialog({
             control={form.control}
             errors={form.formState.errors}
             paymentMethods={paymentMethods}
+            bankAccounts={bankAccounts}
+            accountFieldLabel="Cuenta destino"
             amountPresets={{
               balanceDue,
               onSelect: applyAmount,
@@ -389,10 +520,12 @@ function CreateAdvanceDialog({
 function CreateRefundDialog({
   eventId,
   paymentMethods,
+  bankAccounts,
   onClose,
 }: {
   eventId: string;
   paymentMethods: PaymentMethod[];
+  bankAccounts: BankAccount[];
   onClose: () => void;
 }) {
   const router = useRouter();
@@ -404,6 +537,7 @@ function CreateRefundDialog({
     defaultValues: {
       amount: undefined,
       payment_method_id: paymentMethods[0]?.id,
+      bank_account_id: undefined,
       movement_date: defaultDatetimeLocalValue(),
       notes: "",
     },
@@ -434,6 +568,8 @@ function CreateRefundDialog({
             control={form.control}
             errors={form.formState.errors}
             paymentMethods={paymentMethods}
+            bankAccounts={bankAccounts}
+            accountFieldLabel="Cuenta origen"
           />
           {submitError ? <p className="text-sm text-destructive">{submitError}</p> : null}
           <DialogFooter className="border-t-0 bg-transparent p-0 pt-2">
@@ -453,10 +589,12 @@ function CreateRefundDialog({
 function EditMovementDialog({
   movement,
   paymentMethods,
+  bankAccounts,
   onClose,
 }: {
   movement: EventFinancialMovementWithRelations;
   paymentMethods: PaymentMethod[];
+  bankAccounts: BankAccount[];
   onClose: () => void;
 }) {
   const router = useRouter();
@@ -469,6 +607,7 @@ function EditMovementDialog({
       movement_type: movement.movement_type,
       amount: Number(movement.amount),
       payment_method_id: movement.payment_method_id,
+      bank_account_id: movement.bank_account_id ?? undefined,
       movement_date: toDatetimeLocalValue(movement.movement_date),
       notes: movement.notes ?? "",
     },
@@ -479,6 +618,7 @@ function EditMovementDialog({
       movement_type: movement.movement_type,
       amount: Number(movement.amount),
       payment_method_id: movement.payment_method_id,
+      bank_account_id: movement.bank_account_id ?? undefined,
       movement_date: toDatetimeLocalValue(movement.movement_date),
       notes: movement.notes ?? "",
     });
@@ -509,6 +649,9 @@ function EditMovementDialog({
             control={form.control as unknown as Control<SharedMovementValues>}
             errors={form.formState.errors as FieldErrors<SharedMovementValues>}
             paymentMethods={paymentMethods}
+            bankAccounts={bankAccounts}
+            accountFieldLabel="Cuenta"
+            currentAccountId={movement.bank_account_id}
             showTypeField
             movementTypeControl={form.control}
           />
@@ -532,12 +675,14 @@ function MovementFormDialog({
   eventId,
   balanceDue,
   paymentMethods,
+  bankAccounts,
   onClose,
 }: {
   mode: Exclude<FormMode, { kind: "closed" }>;
   eventId: string;
   balanceDue: number;
   paymentMethods: PaymentMethod[];
+  bankAccounts: BankAccount[];
   onClose: () => void;
 }) {
   if (mode.kind === "edit") {
@@ -545,6 +690,7 @@ function MovementFormDialog({
       <EditMovementDialog
         movement={mode.movement}
         paymentMethods={paymentMethods}
+        bankAccounts={bankAccounts}
         onClose={onClose}
       />
     );
@@ -555,6 +701,7 @@ function MovementFormDialog({
       <CreateRefundDialog
         eventId={eventId}
         paymentMethods={paymentMethods}
+        bankAccounts={bankAccounts}
         onClose={onClose}
       />
     );
@@ -565,6 +712,7 @@ function MovementFormDialog({
       eventId={eventId}
       balanceDue={balanceDue}
       paymentMethods={paymentMethods}
+      bankAccounts={bankAccounts}
       onClose={onClose}
     />
   );
@@ -577,6 +725,7 @@ export function EventPaymentsPanel({
   summary,
   movements,
   paymentMethods,
+  bankAccounts,
 }: EventPaymentsPanelProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -715,6 +864,7 @@ export function EventPaymentsPanel({
                     <TableHead>Fecha</TableHead>
                     <TableHead>Tipo</TableHead>
                     <TableHead>Método</TableHead>
+                    <TableHead>Cuenta</TableHead>
                     <TableHead className="text-right">Monto</TableHead>
                     <TableHead>Notas</TableHead>
                     <TableHead className="w-[120px]" />
@@ -730,6 +880,11 @@ export function EventPaymentsPanel({
                         {FINANCIAL_MOVEMENT_TYPE_LABELS[movement.movement_type]}
                       </TableCell>
                       <TableCell>{movement.payment_methods.name}</TableCell>
+                      <TableCell>
+                        {movement.bank_accounts
+                          ? formatBankAccountShort(movement.bank_accounts)
+                          : "—"}
+                      </TableCell>
                       <TableCell className="text-right font-medium">
                         {formatCurrency(Number(movement.amount))}
                       </TableCell>
@@ -778,6 +933,7 @@ export function EventPaymentsPanel({
           eventId={eventId}
           balanceDue={summary.balanceDue}
           paymentMethods={paymentMethods}
+          bankAccounts={bankAccounts}
           onClose={() => setFormMode({ kind: "closed" })}
         />
       ) : null}

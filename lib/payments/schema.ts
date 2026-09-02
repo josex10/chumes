@@ -7,6 +7,10 @@ const movementBaseSchema = z.object({
     .number()
     .int()
     .positive("Selecciona una forma de pago"),
+  bank_account_id: z.coerce
+    .number()
+    .int()
+    .positive("Selecciona una cuenta"),
   movement_date: z.string().min(1, "La fecha es obligatoria"),
   notes: z.string().trim().optional(),
 });

@@ -214,6 +214,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
               summary={paymentData.summary}
               movements={paymentData.movements}
               paymentMethods={paymentData.paymentMethods}
+              bankAccounts={paymentData.bankAccounts}
             />
           ) : null}
         </div>

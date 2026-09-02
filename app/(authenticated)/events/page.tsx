@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Suspense } from "react";
-import { CalendarDays, Plus, Settings2 } from "lucide-react";
+import { CalendarDays, Landmark, Plus, Settings2 } from "lucide-react";
 import { EventsCollapsibleFilters } from "@/components/events/events-collapsible-filters";
 import { EventsHint } from "@/components/events/events-hint";
 import { EventsHistoryPanel } from "@/components/events/events-history-panel";
@@ -102,6 +102,16 @@ export default async function EventsPage({ searchParams }: EventsPageProps) {
           />
         </h1>
         <div className="flex flex-col gap-2 sm:flex-row">
+          <Link
+            href="/events/settings/accounts"
+            className={cn(
+              buttonVariants({ variant: "outline", size: "sm" }),
+              "inline-flex items-center gap-1.5",
+            )}
+          >
+            <Landmark className="size-4" />
+            Cuentas
+          </Link>
           <Link
             href="/events/settings/sources"
             className={cn(

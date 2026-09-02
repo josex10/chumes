@@ -370,6 +370,9 @@ export function ReservationPdfDocument({ data }: ReservationPdfDocumentProps) {
               <Text>
                 {formatPdfDateTime(movement.movement_date)} ·{" "}
                 {movement.payment_methods.name}
+                {movement.bank_accounts
+                  ? ` · ${movement.bank_accounts.name}`
+                  : ""}
               </Text>
               <Text>{formatPdfCurrency(Number(movement.amount))}</Text>
             </View>
@@ -386,6 +389,9 @@ export function ReservationPdfDocument({ data }: ReservationPdfDocumentProps) {
                   <Text>
                     {formatPdfDateTime(movement.movement_date)} ·{" "}
                     {movement.payment_methods.name}
+                    {movement.bank_accounts
+                      ? ` · ${movement.bank_accounts.name}`
+                      : ""}
                   </Text>
                   <Text>{formatPdfCurrency(Number(movement.amount))}</Text>
                 </View>
