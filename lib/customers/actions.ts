@@ -3,6 +3,11 @@
 import { revalidatePath } from "next/cache";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import {
+  ANONYMOUS_NAME_MAX_ATTEMPTS,
+  buildAnonymousCustomerName,
+} from "@/lib/customers/anonymous-name";
+import {
+  customerNameExists,
   getCustomerById,
   searchCustomers,
   searchCustomersForCombobox,
@@ -120,4 +125,29 @@ export async function searchCustomersListAction(
 
 export async function getCustomerByIdAction(id: string) {
   return getCustomerById(id);
+}
+
+export async function generateUniqueAnonymousCustomerName(): Promise<
+  { success: true; name: string } | { success: false; error: string }
+> {
+  try {
+    for (let attempt = 0; attempt < ANONYMOUS_NAME_MAX_ATTEMPTS; attempt += 1) {
+      const name = buildAnonymousCustomerName();
+      const exists = await customerNameExists(name);
+      if (!exists) {
+        return { success: true, name };
+      }
+    }
+
+    return {
+      success: false,
+      error: "No se pudo generar un nombre único. Inténtalo de nuevo.",
+    };
+  } catch (error) {
+    console.error("[generateUniqueAnonymousCustomerName]", error);
+    return {
+      success: false,
+      error: "No se pudo generar un nombre único. Inténtalo de nuevo.",
+    };
+  }
 }

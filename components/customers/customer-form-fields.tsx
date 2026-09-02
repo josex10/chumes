@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useTransition } from "react";
 import {
   ChevronDown,
+  Dices,
   IdCard,
   Mail,
   Phone,
@@ -17,6 +18,7 @@ import {
   type FieldErrors,
   type UseFormRegister,
 } from "react-hook-form";
+import { generateUniqueAnonymousCustomerName } from "@/lib/customers/actions";
 import { getIndividualCustomerTypeId } from "@/lib/customers/constants";
 import {
   formatPhoneNumber,
@@ -29,6 +31,7 @@ import { cn } from "@/lib/utils";
 import {
   InputGroup,
   InputGroupAddon,
+  InputGroupButton,
   InputGroupInput,
   InputGroupText,
   InputGroupTextarea,
@@ -102,9 +105,14 @@ export function CustomerFormFields({
   notesRows = 3,
 }: CustomerFormFieldsProps) {
   const [advancedOpen, setAdvancedOpen] = useState(defaultAdvancedOpen);
+  const [isGeneratingName, startGeneratingName] = useTransition();
+  const [generateNameError, setGenerateNameError] = useState<string | null>(
+    null,
+  );
 
   useEffect(() => {
     setAdvancedOpen(defaultAdvancedOpen);
+    setGenerateNameError(null);
   }, [defaultAdvancedOpen, resetKey]);
 
   const nameId = `${idPrefix}-name`;
@@ -124,20 +132,56 @@ export function CustomerFormFields({
         <Label htmlFor={nameId}>
           Nombre <span className="text-destructive">*</span>
         </Label>
-        <InputGroup>
-          <InputGroupAddon>
-            <User className="size-4 text-muted-foreground" />
-          </InputGroupAddon>
-          <InputGroupInput
-            id={nameId}
-            autoComplete="name"
-            placeholder="Nombre del cliente"
-            aria-invalid={!!errors.name}
-            {...register("name")}
-          />
-        </InputGroup>
+        <Controller
+          control={control}
+          name="name"
+          render={({ field }) => (
+            <InputGroup>
+              <InputGroupAddon>
+                <User className="size-4 text-muted-foreground" />
+              </InputGroupAddon>
+              <InputGroupInput
+                id={nameId}
+                autoComplete="name"
+                placeholder="Nombre del cliente"
+                aria-invalid={!!errors.name}
+                value={field.value}
+                onBlur={field.onBlur}
+                onChange={field.onChange}
+                name={field.name}
+                ref={field.ref}
+              />
+              <InputGroupAddon align="inline-end">
+                <InputGroupButton
+                  size="icon-xs"
+                  variant="ghost"
+                  disabled={isGeneratingName}
+                  title="Generar nombre aleatorio"
+                  aria-label="Generar nombre aleatorio"
+                  onClick={() => {
+                    setGenerateNameError(null);
+                    startGeneratingName(async () => {
+                      const result =
+                        await generateUniqueAnonymousCustomerName();
+                      if (!result.success) {
+                        setGenerateNameError(result.error);
+                        return;
+                      }
+                      field.onChange(result.name);
+                    });
+                  }}
+                >
+                  <Dices />
+                </InputGroupButton>
+              </InputGroupAddon>
+            </InputGroup>
+          )}
+        />
         {errors.name && (
           <p className="text-sm text-destructive">{errors.name.message}</p>
+        )}
+        {generateNameError && (
+          <p className="text-sm text-destructive">{generateNameError}</p>
         )}
       </div>
 

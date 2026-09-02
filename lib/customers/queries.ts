@@ -161,6 +161,22 @@ export async function getCustomers(): Promise<CustomerWithRelations[]> {
   return customers;
 }
 
+export async function customerNameExists(name: string): Promise<boolean> {
+  const supabase = createAdminSupabaseClient();
+  const { data, error } = await supabase
+    .from("customers")
+    .select("id")
+    .eq("name", name)
+    .maybeSingle();
+
+  if (error) {
+    console.error("[customerNameExists]", error.message);
+    throw error;
+  }
+
+  return data !== null;
+}
+
 export async function getCustomerById(
   id: string,
 ): Promise<CustomerWithRelations | null> {
