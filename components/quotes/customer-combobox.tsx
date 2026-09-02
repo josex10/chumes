@@ -11,6 +11,7 @@ import {
 type CustomerComboboxProps = {
   value?: string;
   onValueChange: (customerId: string) => void;
+  onSelected?: (customer: { id: string; name: string }) => void;
   defaultCustomer?: CustomerWithRelations;
   disabled?: boolean;
   id?: string;
@@ -30,6 +31,7 @@ function toComboboxItem(customer: CustomerWithRelations) {
 export function CustomerCombobox({
   value,
   onValueChange,
+  onSelected,
   defaultCustomer,
   disabled = false,
   id,
@@ -121,6 +123,7 @@ export function CustomerCombobox({
       onValueChange={(nextValue, item) => {
         if (item) {
           setSelectedLabel(item.label);
+          onSelected?.({ id: nextValue, name: item.label });
         }
         onValueChange(nextValue);
       }}

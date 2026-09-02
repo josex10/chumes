@@ -7,6 +7,7 @@ import { EventsHistoryPanel } from "@/components/events/events-history-panel";
 import { EventsKanbanBoard } from "@/components/events/events-kanban-board";
 import { EventsPipelineTabs } from "@/components/events/events-pipeline-tabs";
 import { EventsToolbar } from "@/components/events/events-toolbar";
+import { QuickEventTrigger } from "@/components/events/quick-event-trigger";
 import { getCustomerById } from "@/lib/customers/queries";
 import {
   EVENT_HISTORY_PAGE_SIZE,
@@ -122,6 +123,7 @@ export default async function EventsPage({ searchParams }: EventsPageProps) {
             <Settings2 className="size-4" />
             Fuentes
           </Link>
+          <QuickEventTrigger />
           <Link
             href="/events/new"
             className={cn(

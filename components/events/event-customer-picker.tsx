@@ -14,6 +14,8 @@ type EventCustomerPickerProps = {
   onChange: (customerId: string) => void;
   defaultCustomer?: CustomerWithRelations;
   onCustomerCreated?: (customer: CustomerWithRelations) => void;
+  onCustomerSelected?: (customer: { id: string; name: string }) => void;
+  id?: string;
 };
 
 export function EventCustomerPicker({
@@ -22,6 +24,8 @@ export function EventCustomerPicker({
   onChange,
   defaultCustomer,
   onCustomerCreated,
+  onCustomerSelected,
+  id = "customer_id",
 }: EventCustomerPickerProps) {
   const [modalOpen, setModalOpen] = useState(false);
   const [createdCustomer, setCreatedCustomer] = useState<
@@ -34,21 +38,23 @@ export function EventCustomerPicker({
     setCreatedCustomer(customer);
     onChange(customer.id);
     onCustomerCreated?.(customer);
+    onCustomerSelected?.({ id: customer.id, name: customer.name });
   }
 
   return (
     <>
       <div className="space-y-2">
-        <Label htmlFor="customer_id">
+        <Label htmlFor={id}>
           Cliente <span className="text-destructive">*</span>
         </Label>
         <div className="flex items-center gap-2">
           <div className="min-w-0 flex-1">
             <CustomerCombobox
-              id="customer_id"
+              id={id}
               value={value || undefined}
               defaultCustomer={activeCustomer}
               onValueChange={onChange}
+              onSelected={onCustomerSelected}
               onCreateNew={() => setModalOpen(true)}
             />
           </div>

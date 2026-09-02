@@ -24,6 +24,14 @@ export const eventFormSchema = z.object({
 
 export type EventFormValues = z.infer<typeof eventFormSchema>;
 
+export const quickEventFormSchema = eventFormSchema.pick({
+  title: true,
+  customer_id: true,
+  source_id: true,
+});
+
+export type QuickEventFormValues = z.infer<typeof quickEventFormSchema>;
+
 export function toEventPayload(values: EventFormValues) {
   return {
     title: values.title.trim(),

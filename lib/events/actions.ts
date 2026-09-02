@@ -3,7 +3,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { revalidatePath } from "next/cache";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
-import { EVENT_PHASE, EVENT_STATUS } from "@/lib/events/constants";
+import { EVENT_PHASE, EVENT_PRIORITY, EVENT_STATUS } from "@/lib/events/constants";
 import { hasCompleteDates } from "@/lib/events/dates-status";
 import { getEventSourceById } from "@/lib/event-sources/queries";
 import {
@@ -13,8 +13,10 @@ import {
 } from "@/lib/events/queries";
 import {
   eventFormSchema,
+  quickEventFormSchema,
   toEventPayload,
   type EventFormValues,
+  type QuickEventFormValues,
 } from "@/lib/events/schema";
 import {
   canTransitionStatus,
@@ -102,6 +104,7 @@ export async function createEvent(values: EventFormValues): Promise<ActionResult
 
     revalidatePath("/events");
     revalidatePath("/seguimientos");
+    revalidatePath("/dashboard");
     return { success: true, eventId: data.id };
   } catch (error) {
     console.error("[createEvent]", error);
@@ -110,6 +113,31 @@ export async function createEvent(values: EventFormValues): Promise<ActionResult
       error: error instanceof Error ? error.message : "No se pudo crear el evento.",
     };
   }
+}
+
+export async function createQuickEvent(
+  values: QuickEventFormValues,
+): Promise<ActionResult> {
+  const parsed = quickEventFormSchema.safeParse(values);
+  if (!parsed.success) {
+    return {
+      success: false,
+      error: parsed.error.issues[0]?.message ?? "Datos inválidos",
+    };
+  }
+
+  return createEvent({
+    title: parsed.data.title,
+    customer_id: parsed.data.customer_id,
+    source_id: parsed.data.source_id,
+    contact_id: null,
+    event_date: "",
+    delivery_date: "",
+    pickup_date: "",
+    estimated_location: "",
+    notes: "",
+    priority: EVENT_PRIORITY.NORMAL,
+  });
 }
 
 export async function updateEvent(

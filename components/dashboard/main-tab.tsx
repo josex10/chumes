@@ -3,6 +3,7 @@ import { LeadsDailyBreakdown } from "@/components/dashboard/leads-daily-breakdow
 import { LeadsHeroChart } from "@/components/dashboard/leads-hero-chart";
 import { LeadsSourceSummary } from "@/components/dashboard/leads-source-summary";
 import { ReservationsSummary } from "@/components/dashboard/reservations-summary";
+import { QuickEventTrigger } from "@/components/events/quick-event-trigger";
 import { buttonVariants } from "@/components/ui/button";
 import type { LeadsWeekStats, ReservationsWeekStats } from "@/lib/dashboard/stats";
 import { cn } from "@/lib/utils";
@@ -40,6 +41,7 @@ export function MainTab({ leadsStats, reservationsStats, sourceNames }: MainTabP
       />
 
       <section className="flex flex-wrap gap-3">
+        <QuickEventTrigger size="default" />
         <Link href="/events/new" className={cn(buttonVariants({ variant: "add" }))}>
           Nuevo evento
         </Link>

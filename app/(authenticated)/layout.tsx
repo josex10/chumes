@@ -1,5 +1,8 @@
 import { redirect } from "next/navigation";
+import { QuickEventProvider } from "@/components/events/quick-event-provider";
 import { AppShell } from "@/components/layout/app-shell";
+import { getCustomerTypes } from "@/lib/customers/queries";
+import { getEventSourcesForSelect } from "@/lib/event-sources/queries";
 import { getFollowUpPendingCount } from "@/lib/follow-ups/queries";
 import { getCurrentProfile } from "@/lib/profiles/get-profile";
 import { getProfileStatusCode } from "@/lib/profiles/status";
@@ -32,15 +35,21 @@ export default async function AuthenticatedLayout({
     redirect("/account-setup");
   }
 
-  const pendingFollowUps = await getFollowUpPendingCount();
+  const [pendingFollowUps, customerTypes, sources] = await Promise.all([
+    getFollowUpPendingCount(),
+    getCustomerTypes(),
+    getEventSourcesForSelect(),
+  ]);
 
   return (
-    <AppShell
-      fullName={profile.full_name}
-      email={profile.email}
-      pendingFollowUps={pendingFollowUps}
-    >
-      {children}
-    </AppShell>
+    <QuickEventProvider customerTypes={customerTypes} sources={sources}>
+      <AppShell
+        fullName={profile.full_name}
+        email={profile.email}
+        pendingFollowUps={pendingFollowUps}
+      >
+        {children}
+      </AppShell>
+    </QuickEventProvider>
   );
 }
