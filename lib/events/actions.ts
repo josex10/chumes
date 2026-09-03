@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import { EVENT_PHASE, EVENT_PRIORITY, EVENT_STATUS } from "@/lib/events/constants";
 import { hasCompleteDates } from "@/lib/events/dates-status";
+import { fromDatetimeLocalValue } from "@/lib/events/format-dates";
 import { getEventSourceById } from "@/lib/event-sources/queries";
 import {
   getEventById,
@@ -192,6 +193,7 @@ export async function updateEvent(
 
     revalidatePath("/events");
     revalidatePath("/seguimientos");
+    revalidatePath("/logistica");
     revalidatePath(`/events/${id}`);
     return { success: true, eventId: id };
   } catch (error) {
@@ -199,6 +201,61 @@ export async function updateEvent(
     return {
       success: false,
       error: error instanceof Error ? error.message : "No se pudo actualizar el evento.",
+    };
+  }
+}
+
+export async function updateEventSchedule(
+  id: string,
+  values: {
+    event_date?: string;
+    delivery_date?: string;
+    pickup_date?: string;
+  },
+): Promise<ActionResult> {
+  try {
+    const { userId } = await auth();
+    const event = await getEventById(id);
+    if (!event) {
+      return { success: false, error: "Evento no encontrado." };
+    }
+
+    if (getStatusPhase(event.event_statuses.code) === EVENT_PHASE.TERMINAL) {
+      return {
+        success: false,
+        error: "No se pueden editar fechas de un evento cerrado.",
+      };
+    }
+
+    const supabase = createAdminSupabaseClient();
+    const { error } = await supabase
+      .from("events")
+      .update({
+        event_date: values.event_date?.trim() || null,
+        delivery_date: fromDatetimeLocalValue(values.delivery_date),
+        pickup_date: fromDatetimeLocalValue(values.pickup_date),
+        updated_by: userId,
+      })
+      .eq("id", id);
+
+    if (error) {
+      console.error("[updateEventSchedule]", error.message);
+      return { success: false, error: "No se pudieron actualizar las fechas." };
+    }
+
+    revalidatePath("/events");
+    revalidatePath("/seguimientos");
+    revalidatePath("/logistica");
+    revalidatePath(`/events/${id}`);
+    return { success: true, eventId: id };
+  } catch (error) {
+    console.error("[updateEventSchedule]", error);
+    return {
+      success: false,
+      error:
+        error instanceof Error
+          ? error.message
+          : "No se pudieron actualizar las fechas.",
     };
   }
 }
@@ -265,6 +322,7 @@ export async function updateEventStatus(
 
     revalidatePath("/events");
     revalidatePath("/seguimientos");
+    revalidatePath("/logistica");
     revalidatePath(`/events/${id}`);
     return { success: true, eventId: id };
   } catch (error) {
@@ -331,6 +389,7 @@ export async function confirmAndReserve(id: string): Promise<ActionResult> {
 
     revalidatePath("/events");
     revalidatePath("/seguimientos");
+    revalidatePath("/logistica");
     revalidatePath(`/events/${id}`);
     return { success: true, eventId: id };
   } catch (error) {

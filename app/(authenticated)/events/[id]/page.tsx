@@ -186,9 +186,11 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
           </Card>
 
           <EventScheduleCard
+            eventId={event.id}
             eventDate={event.event_date}
             deliveryDate={event.delivery_date}
             pickupDate={event.pickup_date}
+            canEdit={phase !== EVENT_PHASE.TERMINAL}
           />
 
           <EventFollowUpsCard

@@ -1,5 +1,5 @@
 export const COSTA_RICA_TIMEZONE = "America/Costa_Rica";
-const COSTA_RICA_OFFSET = "-06:00";
+export const COSTA_RICA_OFFSET = "-06:00";
 
 const dateKeyFormatter = new Intl.DateTimeFormat("en-CA", {
   timeZone: COSTA_RICA_TIMEZONE,

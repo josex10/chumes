@@ -139,6 +139,7 @@ async function validateBankAccount(
 
 function revalidateEventPaths(eventId: string) {
   revalidatePath("/events");
+  revalidatePath("/logistica");
   revalidatePath(`/events/${eventId}`);
 }
 

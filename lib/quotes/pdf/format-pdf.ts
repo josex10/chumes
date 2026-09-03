@@ -1,3 +1,5 @@
+import { COSTA_RICA_TIMEZONE } from "@/lib/follow-ups/calendar";
+
 export function formatPdfCurrency(amount: number): string {
   const formatted = new Intl.NumberFormat("es-CR", {
     minimumFractionDigits: 0,
@@ -13,10 +15,11 @@ export function formatPdfDate(value: string | null | undefined): string {
 
   const date = value.includes("T")
     ? new Date(value)
-    : new Date(`${value}T00:00:00`);
+    : new Date(`${value}T12:00:00Z`);
   if (Number.isNaN(date.getTime())) return value;
 
   return date.toLocaleDateString("es-CR", {
+    timeZone: value.includes("T") ? COSTA_RICA_TIMEZONE : "UTC",
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
@@ -35,6 +38,7 @@ export function formatPdfDateTime(value: string | null | undefined): string {
   if (Number.isNaN(date.getTime())) return value;
 
   return date.toLocaleString("es-CR", {
+    timeZone: COSTA_RICA_TIMEZONE,
     weekday: "long",
     day: "numeric",
     month: "long",
@@ -50,10 +54,11 @@ export function formatPdfEventDate(value: string | null | undefined): string {
 
   const date = value.includes("T")
     ? new Date(value)
-    : new Date(`${value}T00:00:00`);
+    : new Date(`${value}T12:00:00Z`);
   if (Number.isNaN(date.getTime())) return value;
 
   return date.toLocaleDateString("es-CR", {
+    timeZone: value.includes("T") ? COSTA_RICA_TIMEZONE : "UTC",
     weekday: "long",
     day: "numeric",
     month: "long",

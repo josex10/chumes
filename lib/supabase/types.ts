@@ -502,6 +502,19 @@ export type EventFollowUpWithRelations = EventFollowUp & {
   follow_up_templates: Pick<FollowUpTemplate, "id" | "name"> | null;
 };
 
+export type EventLogistics = {
+  event_id: string;
+  inventory_checked_at: string | null;
+  pulled_at: string | null;
+  repaired_at: string | null;
+  ironed_at: string | null;
+  packed_at: string | null;
+  delivered_at: string | null;
+  picked_up_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
 export type Database = {
   public: {
     Tables: {
@@ -1205,6 +1218,30 @@ export type Database = {
             columns: ["template_id"],
             referencedRelation: "follow_up_templates",
             referencedColumns: ["id"],
+          },
+        ];
+      };
+      event_logistics: {
+        Row: EventLogistics;
+        Insert: {
+          event_id: string;
+          inventory_checked_at?: string | null;
+          pulled_at?: string | null;
+          repaired_at?: string | null;
+          ironed_at?: string | null;
+          packed_at?: string | null;
+          delivered_at?: string | null;
+          picked_up_at?: string | null;
+        };
+        Update: Partial<
+          Database["public"]["Tables"]["event_logistics"]["Insert"]
+        >;
+        Relationships: [
+          {
+            foreignKeyName: "event_logistics_event_id_fkey";
+            columns: ["event_id"];
+            referencedRelation: "events";
+            referencedColumns: ["id"];
           },
         ];
       };
