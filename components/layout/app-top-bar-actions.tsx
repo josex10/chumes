@@ -44,7 +44,7 @@ export function AppTopBarActions({ fullName, email }: AppTopBarActionsProps) {
   const initials = getInitials(fullName, email);
 
   return (
-    <div className="flex items-center gap-3">
+    <div className="flex items-center gap-1.5 sm:gap-3">
       <time
         className="hidden tabular-nums text-sm text-muted-foreground sm:block"
         dateTime={now?.toISOString()}
