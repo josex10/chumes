@@ -45,6 +45,12 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
         </div>
         <div className="flex flex-col gap-2 sm:flex-row">
           <Link
+            href="/products/categories"
+            className={cn(buttonVariants({ variant: "outline" }))}
+          >
+            Categorías
+          </Link>
+          <Link
             href="/products/new/bundle"
             className={cn(buttonVariants({ variant: "add" }))}
           >

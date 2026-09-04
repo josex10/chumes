@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { PricingFields } from "@/components/products/pricing-fields";
+import { CategoryField } from "@/components/products/category-field";
 import { updateProductDetails } from "@/lib/products/actions";
 import {
   productDetailsSchema,
@@ -15,13 +16,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   Card,
   CardContent,
@@ -99,41 +93,25 @@ export function ProductDetailsTab({
               ) : null}
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="category_id">
-                Categoría <span className="text-destructive">*</span>
-              </Label>
-              <Controller
-                control={control}
-                name="category_id"
-                render={({ field }) => (
-                  <Select
-                    value={field.value ? String(field.value) : undefined}
-                    onValueChange={(value) => field.onChange(Number(value))}
-                    items={categories.map((category) => ({
-                      value: String(category.id),
-                      label: category.name,
-                    }))}
-                  >
-                    <SelectTrigger id="category_id" className="w-full">
-                      <SelectValue placeholder="Seleccione una categoría" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {categories.map((category) => (
-                        <SelectItem key={category.id} value={String(category.id)}>
-                          {category.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-              />
-              {typeof errors.category_id?.message === "string" ? (
-                <p className="text-sm text-destructive">
-                  {errors.category_id.message}
-                </p>
-              ) : null}
-            </div>
+            <Controller
+              control={control}
+              name="category_id"
+              render={({ field }) => (
+                <CategoryField
+                  id="category_id"
+                  value={field.value}
+                  onChange={field.onChange}
+                  defaultCategory={categories.find(
+                    (category) => category.id === field.value,
+                  )}
+                  error={
+                    typeof errors.category_id?.message === "string"
+                      ? errors.category_id.message
+                      : undefined
+                  }
+                />
+              )}
+            />
 
             <div className="space-y-2 lg:col-span-2">
               <Label htmlFor="description">Descripción</Label>

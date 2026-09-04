@@ -1,4 +1,5 @@
 import { PRODUCT_CATEGORY, PRODUCT_TYPE } from "@/lib/products/constants";
+import { slugify } from "@/lib/products/slug";
 import type { ProductCategory, PublicProduct } from "@/lib/supabase/types";
 
 export const CATEGORY_SLUG_BY_CODE: Record<string, string> = {
@@ -54,7 +55,10 @@ export type CatalogFilters = {
 };
 
 export function getCategorySlug(category: ProductCategory): string {
-  return CATEGORY_SLUG_BY_CODE[category.code] ?? String(category.id);
+  return (
+    CATEGORY_SLUG_BY_CODE[category.code] ??
+    (slugify(category.name) || String(category.id))
+  );
 }
 
 export function sortCatalogCategories(categories: ProductCategory[]) {

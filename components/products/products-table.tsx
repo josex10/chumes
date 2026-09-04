@@ -8,7 +8,13 @@ import {
   ShoppingBag,
   Timer,
 } from "lucide-react";
+import { ProductCategoryCell } from "@/components/products/product-category-cell";
+import { ProductInlineTextCell } from "@/components/products/product-inline-text-cell";
 import { ProductRowStatusToggles } from "@/components/products/product-row-status-toggles";
+import {
+  updateProductDescription,
+  updateProductName,
+} from "@/lib/products/actions";
 import { PRODUCT_TYPE } from "@/lib/products/constants";
 import type { ProductListItem } from "@/lib/products/queries";
 import { formatCurrency } from "@/lib/quotes/format";
@@ -70,8 +76,9 @@ export function ProductsTable({ products }: ProductsTableProps) {
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Número</TableHead>
+            <TableHead>Código</TableHead>
             <TableHead>Nombre</TableHead>
+            <TableHead>Descripción</TableHead>
             <TableHead>Categoría</TableHead>
             <TableHead>Tipo</TableHead>
             <TableHead>Alquiler</TableHead>
@@ -88,13 +95,46 @@ export function ProductsTable({ products }: ProductsTableProps) {
 
             return (
               <TableRow key={product.id}>
-                <TableCell className="whitespace-nowrap text-muted-foreground">
+                <TableCell className="whitespace-nowrap font-mono text-sm text-muted-foreground">
                   {product.product_number}
                 </TableCell>
-                <TableCell className="min-w-[180px] font-medium">
-                  {product.name}
+                <TableCell className="min-w-[160px] font-medium">
+                  <ProductInlineTextCell
+                    value={product.name}
+                    ariaLabel={`Editar nombre de ${product.name}`}
+                    placeholder="Nombre del producto"
+                    onSave={async (value) => {
+                      const result = await updateProductName(product.id, value);
+                      return result.success
+                        ? { success: true }
+                        : { success: false, error: result.error };
+                    }}
+                  />
                 </TableCell>
-                <TableCell>{product.product_categories.name}</TableCell>
+                <TableCell className="min-w-[180px] max-w-[280px]">
+                  <ProductInlineTextCell
+                    value={product.description ?? ""}
+                    ariaLabel={`Editar descripción de ${product.name}`}
+                    emptyLabel="Sin descripción"
+                    placeholder="Descripción del producto"
+                    multiline
+                    onSave={async (value) => {
+                      const result = await updateProductDescription(
+                        product.id,
+                        value,
+                      );
+                      return result.success
+                        ? { success: true }
+                        : { success: false, error: result.error };
+                    }}
+                  />
+                </TableCell>
+                <TableCell>
+                  <ProductCategoryCell
+                    productId={product.id}
+                    category={product.product_categories}
+                  />
+                </TableCell>
                 <TableCell>
                   <span
                     className="inline-flex items-center gap-1.5 text-sm"

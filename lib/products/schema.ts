@@ -211,6 +211,26 @@ export const bundleDetailsSchema = bundleGeneralSchema
 export type ProductDetailsValues = z.infer<typeof productDetailsSchema>;
 export type BundleDetailsValues = z.infer<typeof bundleDetailsSchema>;
 
+export const categoryFormSchema = z.object({
+  name: z.string().trim().min(1, "El nombre es obligatorio"),
+  description: z.string().trim().optional(),
+  is_active: z.boolean().optional(),
+});
+
+export type CategoryFormValues = z.infer<typeof categoryFormSchema>;
+
+export const productNameSchema = z.object({
+  name: z.string().trim().min(1, "El nombre es obligatorio"),
+});
+
+export const productDescriptionSchema = z.object({
+  description: z.string().trim().optional(),
+});
+
+export const productCategoryIdSchema = z.object({
+  category_id: z.coerce.number().int().positive("La categoría es obligatoria"),
+});
+
 export function toProductPayload(values: ProductFormValues) {
   return {
     name: values.name.trim(),

@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useForm, Controller, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { CategoryField } from "@/components/products/category-field";
 import { updateBundleGeneral } from "@/lib/products/actions";
 import {
   bundleGeneralSchema,
@@ -15,13 +16,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   Card,
   CardContent,
@@ -101,36 +95,21 @@ export function BundleGeneralTab({
               ) : null}
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="category_id">
-                Category <span className="text-destructive">*</span>
-              </Label>
-              <Controller
-                control={control}
-                name="category_id"
-                render={({ field }) => (
-                  <Select
-                    value={field.value ? String(field.value) : undefined}
-                    onValueChange={(value) => field.onChange(Number(value))}
-                    items={categories.map((category) => ({
-                      value: String(category.id),
-                      label: category.name,
-                    }))}
-                  >
-                    <SelectTrigger id="category_id" className="w-full">
-                      <SelectValue placeholder="Select a category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {categories.map((category) => (
-                        <SelectItem key={category.id} value={String(category.id)}>
-                          {category.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-              />
-            </div>
+            <Controller
+              control={control}
+              name="category_id"
+              render={({ field }) => (
+                <CategoryField
+                  id="category_id"
+                  value={field.value}
+                  onChange={field.onChange}
+                  defaultCategory={categories.find(
+                    (category) => category.id === field.value,
+                  )}
+                  error={errors.category_id?.message}
+                />
+              )}
+            />
           </div>
 
           <div className="space-y-2">

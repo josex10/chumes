@@ -10,15 +10,22 @@ import {
 } from "@/lib/products/constants";
 import { generateNextProductNumber } from "@/lib/products/product-number";
 import { ensureUniqueProductSlug } from "@/lib/products/slug";
+import { ensureUniqueCategoryCode } from "@/lib/products/category-code";
 import {
+  countProductsInCategory,
   getProductById,
+  getProductCategoryById,
   getQuotableProductById,
+  searchProductCategoriesForCombobox,
   searchQuotableProductsForCombobox,
   searchSimpleProductsForCombobox,
+  type SearchProductCategoriesParams,
+  type SearchProductCategoriesResult,
   type SearchProductsParams,
   type SearchQuotableProductsResult,
   type SearchSimpleProductsResult,
 } from "@/lib/products/queries";
+import type { ProductCategory } from "@/lib/supabase/types";
 import {
   bundleFormSchema,
   productFormSchema,
@@ -851,4 +858,318 @@ export async function updateBundleDetails(
     rental_price: parsed.data.rental_price,
     sale_price: parsed.data.sale_price,
   });
+}
+
+function revalidateCategoryPaths(productId?: string) {
+  revalidatePath("/products");
+  revalidatePath("/products/categories");
+  revalidatePath("/catalogo");
+  revalidatePath("/");
+  if (productId) {
+    revalidatePath(`/products/${productId}/edit`);
+  }
+}
+
+type CategoryActionResult =
+  | { success: true; category?: ProductCategory }
+  | { success: false; error: string };
+
+export async function searchProductCategoriesAction(
+  params: SearchProductCategoriesParams,
+): Promise<SearchProductCategoriesResult> {
+  return searchProductCategoriesForCombobox(params);
+}
+
+export async function getProductCategoryByIdAction(id: number) {
+  return getProductCategoryById(id);
+}
+
+export async function createCategory(
+  values: import("@/lib/products/schema").CategoryFormValues,
+): Promise<CategoryActionResult> {
+  const { categoryFormSchema } = await import("@/lib/products/schema");
+  const parsed = categoryFormSchema.safeParse(values);
+  if (!parsed.success) {
+    return {
+      success: false,
+      error: parsed.error.issues[0]?.message ?? "Datos de la categoría inválidos",
+    };
+  }
+
+  try {
+    const supabase = createAdminSupabaseClient();
+    const code = await ensureUniqueCategoryCode(parsed.data.name);
+
+    const { data, error } = await supabase
+      .from("product_categories")
+      .insert({
+        code,
+        name: parsed.data.name.trim(),
+        description: parsed.data.description?.trim() || null,
+        is_active: parsed.data.is_active ?? true,
+      })
+      .select("*")
+      .single();
+
+    if (error || !data) {
+      console.error("[createCategory]", error?.message);
+      return { success: false, error: "No se pudo crear la categoría." };
+    }
+
+    revalidateCategoryPaths();
+    return { success: true, category: data };
+  } catch (error) {
+    console.error("[createCategory]", error);
+    return { success: false, error: "No se pudo crear la categoría." };
+  }
+}
+
+export async function createCategoryAndFetch(
+  values: import("@/lib/products/schema").CategoryFormValues,
+): Promise<CategoryActionResult> {
+  return createCategory(values);
+}
+
+export async function updateCategory(
+  id: number,
+  values: import("@/lib/products/schema").CategoryFormValues,
+): Promise<CategoryActionResult> {
+  const { categoryFormSchema } = await import("@/lib/products/schema");
+  const parsed = categoryFormSchema.safeParse(values);
+  if (!parsed.success) {
+    return {
+      success: false,
+      error: parsed.error.issues[0]?.message ?? "Datos de la categoría inválidos",
+    };
+  }
+
+  try {
+    const existing = await getProductCategoryById(id);
+    if (!existing) {
+      return { success: false, error: "Categoría no encontrada." };
+    }
+
+    const supabase = createAdminSupabaseClient();
+    const { data, error } = await supabase
+      .from("product_categories")
+      .update({
+        name: parsed.data.name.trim(),
+        description: parsed.data.description?.trim() || null,
+        is_active: parsed.data.is_active ?? existing.is_active,
+      })
+      .eq("id", id)
+      .select("*")
+      .single();
+
+    if (error || !data) {
+      console.error("[updateCategory]", error?.message);
+      return { success: false, error: "No se pudo actualizar la categoría." };
+    }
+
+    revalidateCategoryPaths();
+    return { success: true, category: data };
+  } catch (error) {
+    console.error("[updateCategory]", error);
+    return { success: false, error: "No se pudo actualizar la categoría." };
+  }
+}
+
+export async function toggleCategoryActive(
+  categoryId: number,
+): Promise<CategoryActionResult> {
+  try {
+    const category = await getProductCategoryById(categoryId);
+    if (!category) {
+      return { success: false, error: "Categoría no encontrada." };
+    }
+
+    const supabase = createAdminSupabaseClient();
+    const { data, error } = await supabase
+      .from("product_categories")
+      .update({ is_active: !category.is_active })
+      .eq("id", categoryId)
+      .select("*")
+      .single();
+
+    if (error || !data) {
+      console.error("[toggleCategoryActive]", error?.message);
+      return { success: false, error: "No se pudo actualizar el estado de la categoría." };
+    }
+
+    revalidateCategoryPaths();
+    return { success: true, category: data };
+  } catch (error) {
+    console.error("[toggleCategoryActive]", error);
+    return { success: false, error: "No se pudo actualizar el estado de la categoría." };
+  }
+}
+
+export async function deleteCategory(
+  categoryId: number,
+): Promise<CategoryActionResult> {
+  try {
+    const category = await getProductCategoryById(categoryId);
+    if (!category) {
+      return { success: false, error: "Categoría no encontrada." };
+    }
+
+    const productCount = await countProductsInCategory(categoryId);
+    if (productCount > 0) {
+      return {
+        success: false,
+        error: `Hay ${productCount} producto${productCount === 1 ? "" : "s"} en esta categoría. Reasígnelos antes de eliminarla.`,
+      };
+    }
+
+    const supabase = createAdminSupabaseClient();
+    const { error } = await supabase
+      .from("product_categories")
+      .delete()
+      .eq("id", categoryId);
+
+    if (error) {
+      console.error("[deleteCategory]", error.message);
+      return { success: false, error: "No se pudo eliminar la categoría." };
+    }
+
+    revalidateCategoryPaths();
+    return { success: true };
+  } catch (error) {
+    console.error("[deleteCategory]", error);
+    return { success: false, error: "No se pudo eliminar la categoría." };
+  }
+}
+
+export async function updateProductCategory(
+  productId: string,
+  categoryId: number,
+): Promise<MutationResult> {
+  const { productCategoryIdSchema } = await import("@/lib/products/schema");
+  const parsed = productCategoryIdSchema.safeParse({ category_id: categoryId });
+  if (!parsed.success) {
+    return {
+      success: false,
+      error: parsed.error.issues[0]?.message ?? "La categoría es obligatoria",
+    };
+  }
+
+  try {
+    const { userId } = await auth();
+    const [product, category] = await Promise.all([
+      getProductById(productId),
+      getProductCategoryById(parsed.data.category_id),
+    ]);
+
+    if (!product) {
+      return { success: false, error: "Producto no encontrado." };
+    }
+
+    if (!category) {
+      return { success: false, error: "Categoría no encontrada." };
+    }
+
+    const supabase = createAdminSupabaseClient();
+    const { error } = await supabase
+      .from("products")
+      .update({
+        category_id: parsed.data.category_id,
+        updated_by: userId,
+      })
+      .eq("id", productId);
+
+    if (error) {
+      console.error("[updateProductCategory]", error.message);
+      return { success: false, error: "No se pudo actualizar la categoría del producto." };
+    }
+
+    revalidateCategoryPaths(productId);
+    return { success: true, productId };
+  } catch (error) {
+    console.error("[updateProductCategory]", error);
+    return { success: false, error: "No se pudo actualizar la categoría del producto." };
+  }
+}
+
+export async function updateProductName(
+  productId: string,
+  name: string,
+): Promise<MutationResult> {
+  const { productNameSchema } = await import("@/lib/products/schema");
+  const parsed = productNameSchema.safeParse({ name });
+  if (!parsed.success) {
+    return {
+      success: false,
+      error: parsed.error.issues[0]?.message ?? "El nombre es obligatorio",
+    };
+  }
+
+  try {
+    const { userId } = await auth();
+    const product = await getProductById(productId);
+    if (!product) {
+      return { success: false, error: "Producto no encontrado." };
+    }
+
+    const supabase = createAdminSupabaseClient();
+    const { error } = await supabase
+      .from("products")
+      .update({
+        name: parsed.data.name.trim(),
+        updated_by: userId,
+      })
+      .eq("id", productId);
+
+    if (error) {
+      console.error("[updateProductName]", error.message);
+      return { success: false, error: "No se pudo actualizar el nombre." };
+    }
+
+    revalidateCategoryPaths(productId);
+    return { success: true, productId };
+  } catch (error) {
+    console.error("[updateProductName]", error);
+    return { success: false, error: "No se pudo actualizar el nombre." };
+  }
+}
+
+export async function updateProductDescription(
+  productId: string,
+  description: string,
+): Promise<MutationResult> {
+  const { productDescriptionSchema } = await import("@/lib/products/schema");
+  const parsed = productDescriptionSchema.safeParse({ description });
+  if (!parsed.success) {
+    return {
+      success: false,
+      error: parsed.error.issues[0]?.message ?? "Descripción inválida",
+    };
+  }
+
+  try {
+    const { userId } = await auth();
+    const product = await getProductById(productId);
+    if (!product) {
+      return { success: false, error: "Producto no encontrado." };
+    }
+
+    const supabase = createAdminSupabaseClient();
+    const { error } = await supabase
+      .from("products")
+      .update({
+        description: parsed.data.description?.trim() || null,
+        updated_by: userId,
+      })
+      .eq("id", productId);
+
+    if (error) {
+      console.error("[updateProductDescription]", error.message);
+      return { success: false, error: "No se pudo actualizar la descripción." };
+    }
+
+    revalidateCategoryPaths(productId);
+    return { success: true, productId };
+  } catch (error) {
+    console.error("[updateProductDescription]", error);
+    return { success: false, error: "No se pudo actualizar la descripción." };
+  }
 }

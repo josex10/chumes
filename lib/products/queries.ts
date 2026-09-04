@@ -1,6 +1,7 @@
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import { computeBundleAvailability } from "@/lib/products/bundle-availability";
 import {
+  CATEGORY_COMBOBOX_PAGE_SIZE,
   PRODUCT_COMBOBOX_PAGE_SIZE,
   PRODUCT_LIST_PAGE_SIZE,
   PRODUCT_TYPE,
@@ -220,6 +221,34 @@ async function attachPricesToProducts(
   }));
 }
 
+export type ProductCategoryListItem = ProductCategory & {
+  product_count: number;
+};
+
+export type SearchProductCategoriesParams = {
+  query?: string;
+  page?: number;
+  pageSize?: number;
+  activeOnly?: boolean;
+};
+
+export type SearchProductCategoriesResult = {
+  categories: ProductCategory[];
+  total: number;
+  page: number;
+  pageSize: number;
+  hasMore: boolean;
+};
+
+function buildCategorySearchFilter(query: string): string {
+  const trimmed = query.trim();
+  if (!trimmed) return "";
+
+  const escaped = escapeIlikePattern(trimmed);
+  const pattern = `%${escaped}%`;
+  return [`name.ilike.${pattern}`, `code.ilike.${pattern}`].join(",");
+}
+
 export async function getProductCategories(): Promise<ProductCategory[]> {
   const supabase = createAdminSupabaseClient();
   const { data, error } = await supabase
@@ -234,6 +263,137 @@ export async function getProductCategories(): Promise<ProductCategory[]> {
   }
 
   return data ?? [];
+}
+
+export async function getProductCategoryById(
+  id: number,
+): Promise<ProductCategory | null> {
+  const supabase = createAdminSupabaseClient();
+  const { data, error } = await supabase
+    .from("product_categories")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (error) {
+    console.error("[getProductCategoryById]", error.message);
+    return null;
+  }
+
+  return data;
+}
+
+export async function searchProductCategories({
+  query = "",
+  page = 1,
+  pageSize = CATEGORY_COMBOBOX_PAGE_SIZE,
+  activeOnly = true,
+}: SearchProductCategoriesParams = {}): Promise<SearchProductCategoriesResult> {
+  const supabase = createAdminSupabaseClient();
+  const normalizedPage = Math.max(1, page);
+  const normalizedPageSize = Math.max(1, pageSize);
+  const offset = (normalizedPage - 1) * normalizedPageSize;
+  const searchFilter = buildCategorySearchFilter(query);
+
+  let builder = supabase
+    .from("product_categories")
+    .select("*", { count: "exact" })
+    .order("name", { ascending: true });
+
+  if (activeOnly) {
+    builder = builder.eq("is_active", true);
+  }
+
+  if (searchFilter) {
+    builder = builder.or(searchFilter);
+  }
+
+  const { data, error, count } = await builder.range(
+    offset,
+    offset + normalizedPageSize - 1,
+  );
+
+  if (error) {
+    console.error("[searchProductCategories]", error.message);
+    return {
+      categories: [],
+      total: 0,
+      page: normalizedPage,
+      pageSize: normalizedPageSize,
+      hasMore: false,
+    };
+  }
+
+  const total = count ?? 0;
+
+  return {
+    categories: data ?? [],
+    total,
+    page: normalizedPage,
+    pageSize: normalizedPageSize,
+    hasMore: normalizedPage * normalizedPageSize < total,
+  };
+}
+
+export async function searchProductCategoriesForCombobox(
+  params: Omit<SearchProductCategoriesParams, "pageSize"> & { pageSize?: number },
+): Promise<SearchProductCategoriesResult> {
+  return searchProductCategories({
+    ...params,
+    pageSize: params.pageSize ?? CATEGORY_COMBOBOX_PAGE_SIZE,
+    activeOnly: params.activeOnly ?? true,
+  });
+}
+
+export async function listProductCategories(): Promise<ProductCategoryListItem[]> {
+  const supabase = createAdminSupabaseClient();
+  const { data, error } = await supabase
+    .from("product_categories")
+    .select("*")
+    .order("name", { ascending: true });
+
+  if (error) {
+    console.error("[listProductCategories]", error.message);
+    return [];
+  }
+
+  const categories = data ?? [];
+  if (categories.length === 0) {
+    return [];
+  }
+
+  const { data: productRows, error: countError } = await supabase
+    .from("products")
+    .select("category_id");
+
+  if (countError) {
+    console.error("[listProductCategories] product counts", countError.message);
+  }
+
+  const counts = new Map<number, number>();
+  for (const row of productRows ?? []) {
+    counts.set(row.category_id, (counts.get(row.category_id) ?? 0) + 1);
+  }
+
+  return categories.map((category) => ({
+    ...category,
+    product_count: counts.get(category.id) ?? 0,
+  }));
+}
+
+export async function countProductsInCategory(categoryId: number): Promise<number> {
+  const supabase = createAdminSupabaseClient();
+  const { count, error } = await supabase
+    .from("products")
+    .select("id", { count: "exact", head: true })
+    .eq("category_id", categoryId);
+
+  if (error) {
+    console.error("[countProductsInCategory]", error.message);
+    return 0;
+  }
+
+  return count ?? 0;
 }
 
 export async function getProductTypes(): Promise<ProductType[]> {

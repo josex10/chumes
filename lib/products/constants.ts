@@ -29,6 +29,9 @@ export const PRODUCT_COMBOBOX_PAGE_SIZE = 10;
 export const PRODUCT_LIST_PAGE_SIZE = 10;
 export const PRODUCT_SEARCH_DEBOUNCE_MS = 300;
 
+export const CATEGORY_COMBOBOX_PAGE_SIZE = 10;
+export const CATEGORY_SEARCH_DEBOUNCE_MS = 300;
+
 export const PRODUCT_EDIT_TAB = {
   GENERAL: "general",
   CATALOG: "catalog",

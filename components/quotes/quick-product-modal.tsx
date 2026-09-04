@@ -3,6 +3,7 @@
 import { useEffect, useTransition } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { CategoryField } from "@/components/products/category-field";
 import { createProductAndFetch } from "@/lib/products/actions";
 import { productFormSchema, type ProductFormValues } from "@/lib/products/schema";
 import type { ProductCategory, QuotableProduct } from "@/lib/supabase/types";
@@ -18,13 +19,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 
 type QuickProductModalProps = {
   open: boolean;
@@ -116,37 +110,21 @@ export function QuickProductModal({
             )}
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="quick-product-category">Categoría *</Label>
-            <Controller
-              control={control}
-              name="category_id"
-              render={({ field }) => (
-                <Select
-                  value={field.value ? String(field.value) : undefined}
-                  onValueChange={(value) => field.onChange(Number(value))}
-                  items={categories.map((category) => ({
-                    value: String(category.id),
-                    label: category.name,
-                  }))}
-                >
-                  <SelectTrigger id="quick-product-category" className="w-full">
-                    <SelectValue placeholder="Seleccionar categoría" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categories.map((category) => (
-                      <SelectItem key={category.id} value={String(category.id)}>
-                        {category.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-            />
-            {errors.category_id && (
-              <p className="text-sm text-destructive">{errors.category_id.message}</p>
+          <Controller
+            control={control}
+            name="category_id"
+            render={({ field }) => (
+              <CategoryField
+                id="quick-product-category"
+                value={field.value}
+                onChange={field.onChange}
+                defaultCategory={categories.find(
+                  (category) => category.id === field.value,
+                )}
+                error={errors.category_id?.message}
+              />
             )}
-          </div>
+          />
 
           <div className="space-y-2">
             <Label htmlFor="quick-product-description">Descripción</Label>
