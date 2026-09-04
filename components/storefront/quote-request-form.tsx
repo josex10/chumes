@@ -2,57 +2,66 @@
 
 import Link from "next/link";
 import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
-import { useCart, type CartLineType } from "@/components/storefront/cart-provider";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useCart } from "@/components/storefront/cart-provider";
+import { QuoteSummary } from "@/components/storefront/quote-summary";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { submitQuoteRequest } from "@/lib/storefront/actions";
-import { formatCurrency } from "@/lib/quotes/format";
-import { QUOTE_LINE_TYPE } from "@/lib/quotes/constants";
 import { PHONE_MASK_PLACEHOLDER } from "@/lib/customers/phone";
-import { cn } from "@/lib/utils";
-
-function lineTypeLabel(lineType: CartLineType) {
-  return lineType === QUOTE_LINE_TYPE.RENTAL ? "Alquiler" : "Venta";
-}
+import {
+  LAST_QUOTE_WHATSAPP_KEY,
+  buildQuoteWhatsAppMessage,
+  cartItemsToWhatsAppLines,
+} from "@/lib/storefront/quote-message";
 
 export function QuoteRequestForm() {
   const router = useRouter();
-  const { items, updateQuantity, removeItem, clearCart } = useCart();
+  const searchParams = useSearchParams();
+  const { items, clearCart } = useCart();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
-
-  const subtotal = items.reduce(
-    (total, item) => total + item.quantity * item.unitPrice,
-    0,
-  );
+  const inquiryType = searchParams.get("tipo") ?? "";
 
   function handleSubmit(formData: FormData) {
     setError(null);
+    const guestRaw = String(formData.get("guest_count") ?? "").trim();
+    const guestCount = guestRaw ? Number(guestRaw) : undefined;
+    const payload = {
+      name: String(formData.get("name") ?? ""),
+      phone: String(formData.get("phone") ?? ""),
+      email: String(formData.get("email") ?? ""),
+      event_date: String(formData.get("event_date") ?? ""),
+      estimated_location: String(formData.get("estimated_location") ?? ""),
+      guest_count: guestCount,
+      inquiry_type: String(formData.get("inquiry_type") ?? ""),
+      notes: String(formData.get("notes") ?? ""),
+      website: String(formData.get("website") ?? ""),
+      items: items.map((item) => ({
+        product_id: item.productId,
+        line_type: item.lineType,
+        quantity: item.quantity,
+      })),
+    };
 
     startTransition(async () => {
-      const result = await submitQuoteRequest({
-        name: String(formData.get("name") ?? ""),
-        phone: String(formData.get("phone") ?? ""),
-        email: String(formData.get("email") ?? ""),
-        event_date: String(formData.get("event_date") ?? ""),
-        estimated_location: String(formData.get("estimated_location") ?? ""),
-        notes: String(formData.get("notes") ?? ""),
-        website: String(formData.get("website") ?? ""),
-        items: items.map((item) => ({
-          product_id: item.productId,
-          line_type: item.lineType,
-          quantity: item.quantity,
-        })),
-      });
+      const result = await submitQuoteRequest(payload);
 
       if (!result.success) {
         setError(result.error);
         return;
       }
 
+      const message = buildQuoteWhatsAppMessage({
+        name: payload.name,
+        eventDate: payload.event_date || undefined,
+        guestCount: guestCount || null,
+        location: payload.estimated_location || undefined,
+        notes: payload.notes || undefined,
+        items: cartItemsToWhatsAppLines(items),
+      });
+      sessionStorage.setItem(LAST_QUOTE_WHATSAPP_KEY, message);
       clearCart();
       router.push("/cotizar/exito");
     });
@@ -60,14 +69,15 @@ export function QuoteRequestForm() {
 
   if (items.length === 0) {
     return (
-      <div className="rounded-3xl border border-dashed border-border/80 bg-card px-8 py-16 text-center">
-        <h2 className="text-2xl font-semibold">Su cotización está vacía</h2>
-        <p className="mt-3 text-muted-foreground">
-          Explore el catálogo y agregue los productos que necesita para su evento.
+      <div className="border border-dashed border-arena px-8 py-16 text-center">
+        <h2 className="font-heading text-3xl">Tu evento todavía está vacío</h2>
+        <p className="mx-auto mt-3 max-w-md text-muted-foreground">
+          Explorá el catálogo y agregá lo que necesitás. Después volvés aquí a
+          pedir la cotización.
         </p>
         <Link
           href="/catalogo"
-          className={cn(buttonVariants({ variant: "commit" }), "mt-8 rounded-full px-6")}
+          className="mt-8 inline-flex h-12 items-center rounded-full bg-brand px-7 text-sm text-ivory hover:bg-brand-deep"
         >
           Ver catálogo
         </Link>
@@ -76,85 +86,66 @@ export function QuoteRequestForm() {
   }
 
   return (
-    <div className="grid gap-8 lg:grid-cols-[1.2fr_0.8fr]">
-      <section className="rounded-3xl border border-border/70 bg-card p-6 md:p-8">
-        <h2 className="text-xl font-semibold">Productos seleccionados</h2>
-        <div className="mt-6 space-y-4">
-          {items.map((item) => (
-            <div
-              key={`${item.productId}-${item.lineType}`}
-              className="flex flex-col gap-4 rounded-2xl border border-border/60 p-4 sm:flex-row sm:items-center sm:justify-between"
-            >
-              <div>
-                <p className="font-medium">{item.name}</p>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  {lineTypeLabel(item.lineType)} ·{" "}
-                  {formatCurrency(item.unitPrice)} c/u
-                </p>
-              </div>
-              <div className="flex items-center gap-3">
-                <Input
-                  type="number"
-                  min="1"
-                  value={item.quantity}
-                  onChange={(event) =>
-                    updateQuantity(
-                      item.productId,
-                      item.lineType,
-                      Number(event.target.value),
-                    )
-                  }
-                  className="w-24"
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={() => removeItem(item.productId, item.lineType)}
-                >
-                  Quitar
-                </Button>
-              </div>
-            </div>
-          ))}
-        </div>
-        <p className="mt-6 text-sm text-muted-foreground">
-          Los precios mostrados son referenciales. El equipo confirmará entrega,
-          disponibilidad e impuestos antes de enviar la cotización final.
-        </p>
-      </section>
+    <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">
+      <QuoteSummary />
 
-      <section className="rounded-3xl border border-border/70 bg-card p-6 md:p-8">
-        <h2 className="text-xl font-semibold">Datos del evento</h2>
+      <section className="border border-arena/80 bg-ivory p-6 md:p-8">
+        <p className="text-[0.7rem] tracking-[0.22em] text-brand-gold uppercase">
+          Datos
+        </p>
+        <h2 className="font-heading mt-2 text-3xl">Contanos sobre tu evento</h2>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Con la fecha y cuántas personas van, te ayudamos a calcular lo que
+          necesitás.
+        </p>
         <form action={handleSubmit} className="mt-6 space-y-4">
           <div className="space-y-2">
             <Label htmlFor="name">Nombre</Label>
-            <Input id="name" name="name" required />
+            <Input id="name" name="name" required autoComplete="name" />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="phone">Teléfono</Label>
+            <Label htmlFor="phone">WhatsApp</Label>
             <Input
               id="phone"
               name="phone"
               required
+              inputMode="tel"
               placeholder={PHONE_MASK_PLACEHOLDER}
             />
           </div>
           <div className="space-y-2">
             <Label htmlFor="email">Correo (opcional)</Label>
-            <Input id="email" name="email" type="email" />
+            <Input id="email" name="email" type="email" autoComplete="email" />
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="event_date">Fecha del evento</Label>
+              <Input id="event_date" name="event_date" type="date" />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="guest_count">Cantidad de personas</Label>
+              <Input
+                id="guest_count"
+                name="guest_count"
+                type="number"
+                min="1"
+                placeholder="Ej. 80"
+              />
+            </div>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="event_date">Fecha del evento (opcional)</Label>
-            <Input id="event_date" name="event_date" type="date" />
+            <Label htmlFor="estimated_location">Ubicación</Label>
+            <Input
+              id="estimated_location"
+              name="estimated_location"
+              placeholder="Gran Área Metropolitana"
+            />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="estimated_location">Lugar del evento (opcional)</Label>
-            <Input id="estimated_location" name="estimated_location" />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="notes">Notas adicionales</Label>
+            <Label htmlFor="notes">Comentarios</Label>
             <Textarea id="notes" name="notes" rows={4} />
           </div>
+          <input type="hidden" name="inquiry_type" value={inquiryType} />
           <input
             type="text"
             name="website"
@@ -164,23 +155,15 @@ export function QuoteRequestForm() {
             aria-hidden="true"
           />
 
-          <div className="rounded-2xl bg-muted/50 px-4 py-3 text-sm">
-            <div className="flex items-center justify-between">
-              <span>Subtotal referencial</span>
-              <span className="font-medium">{formatCurrency(subtotal)}</span>
-            </div>
-          </div>
-
           {error ? <p className="text-sm text-destructive">{error}</p> : null}
 
-          <Button
+          <button
             type="submit"
-            variant="commit"
             disabled={isPending}
-            className="w-full rounded-full"
+            className="inline-flex h-12 w-full items-center justify-center rounded-full bg-brand text-sm text-ivory hover:bg-brand-deep disabled:opacity-60"
           >
-            {isPending ? "Enviando..." : "Enviar solicitud de cotización"}
-          </Button>
+            {isPending ? "Enviando..." : "Solicitar cotización"}
+          </button>
         </form>
       </section>
     </div>

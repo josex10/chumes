@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { QuickEventProvider } from "@/components/events/quick-event-provider";
 import { AppShell } from "@/components/layout/app-shell";
@@ -9,6 +10,18 @@ import { getProfileStatusCode } from "@/lib/profiles/status";
 import { PROFILE_STATUS } from "@/lib/profiles/constants";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: {
+    default: "Intranet",
+    template: "%s | Chumes",
+  },
+  description: "Intranet de operaciones Chumes.",
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
 
 export default async function AuthenticatedLayout({
   children,

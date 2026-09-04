@@ -1,22 +1,29 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { QuoteRequestForm } from "@/components/storefront/quote-request-form";
-import { StoreHero } from "@/app/(public)/layout";
+import { SectionHeading } from "@/components/storefront/section-heading";
 
 export const metadata: Metadata = {
   title: "Cotizar",
-  description: "Arme su solicitud de cotización para mantelería y mobiliario.",
+  description:
+    "Armá tu evento, contanos los detalles y recibí una cotización de Chumes.",
 };
 
 export default function QuotePage() {
   return (
     <>
-      <StoreHero
-        eyebrow="Cotización"
-        title="Solicite su cotización"
-        description="Revise los productos seleccionados, complete sus datos y envíenos la solicitud. Le contactaremos para confirmar detalles."
-      />
-      <section className="mx-auto w-full max-w-6xl px-6 pb-20">
-        <QuoteRequestForm />
+      <section className="mx-auto w-full max-w-6xl px-5 pt-14 pb-8 md:px-6 md:pt-20">
+        <SectionHeading
+          as="h1"
+          eyebrow="Cotización"
+          title="Armá tu evento y pedí cotización."
+          description="Revisá lo que elegiste, contanos fecha y cantidad de personas, y te contactamos."
+        />
+      </section>
+      <section className="mx-auto w-full max-w-6xl px-5 pb-24 md:px-6">
+        <Suspense>
+          <QuoteRequestForm />
+        </Suspense>
       </section>
     </>
   );

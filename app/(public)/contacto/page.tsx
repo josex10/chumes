@@ -1,67 +1,102 @@
 import type { Metadata } from "next";
-import { StoreHero } from "@/app/(public)/layout";
-import { CHUMES_STOREFRONT, getWhatsAppUrl } from "@/lib/storefront/company";
-import { buttonVariants } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import Link from "next/link";
+import { WhatsAppButton } from "@/components/storefront/whatsapp-button";
+import {
+  CHUMES_STOREFRONT,
+  getWhatsAppHref,
+  hasWhatsAppNumber,
+} from "@/lib/storefront/company";
 
 export const metadata: Metadata = {
   title: "Contacto",
-  description: "Contáctenos para cotizar mantelería y mobiliario para eventos.",
+  description:
+    "Escribinos por WhatsApp o cotizá en línea. Alquiler de equipo para eventos en la Gran Área Metropolitana.",
 };
 
 export default function ContactPage() {
-  const whatsappUrl = getWhatsAppUrl();
+  const whatsappHref = getWhatsAppHref();
 
   return (
     <>
-      <StoreHero
-        eyebrow="Contacto"
-        title="Hablemos de su evento"
-        description="Cuéntenos qué necesita y con gusto le ayudamos a armar la cotización ideal."
-      />
+      <section className="mx-auto w-full max-w-6xl px-5 pt-16 pb-10 md:px-6 md:pt-24">
+        <p className="text-[0.7rem] tracking-[0.28em] text-brand-gold uppercase">
+          Contacto
+        </p>
+        <h1 className="font-heading mt-4 max-w-3xl text-4xl font-medium tracking-tight md:text-5xl">
+          Hablemos de tu evento.
+        </h1>
+        <p className="mt-5 max-w-xl text-lg text-muted-foreground">
+          Contanos qué estás organizando. Te ayudamos a elegir el equipo y te
+          armamos la cotización.
+        </p>
+      </section>
 
-      <section className="mx-auto grid w-full max-w-6xl gap-6 px-6 pb-20 md:grid-cols-2">
-        <div className="rounded-3xl border border-border/70 bg-card p-8">
-          <h2 className="text-xl font-semibold">{CHUMES_STOREFRONT.name}</h2>
-          <dl className="mt-6 space-y-4 text-sm">
-            {CHUMES_STOREFRONT.phone ? (
-              <div>
-                <dt className="text-muted-foreground">Teléfono</dt>
-                <dd className="mt-1 text-base">{CHUMES_STOREFRONT.phone}</dd>
-              </div>
-            ) : null}
+      <section className="mx-auto grid w-full max-w-6xl gap-8 px-5 pb-24 md:grid-cols-2 md:px-6">
+        <div className="border border-arena/80 bg-ivory p-8">
+          <h2 className="font-heading text-2xl">WhatsApp</h2>
+          <p className="mt-3 text-muted-foreground">
+            Es la forma más rápida de coordinar fechas y cantidades.
+          </p>
+          <p className="mt-6 text-lg">{CHUMES_STOREFRONT.phone}</p>
+          <div className="mt-6">
+            <WhatsAppButton label="Hablar por WhatsApp" />
+          </div>
+          <dl className="mt-10 space-y-4 text-sm">
+            <div>
+              <dt className="text-muted-foreground">Cobertura</dt>
+              <dd className="mt-1 text-base">{CHUMES_STOREFRONT.coverage}</dd>
+            </div>
             {CHUMES_STOREFRONT.email ? (
               <div>
                 <dt className="text-muted-foreground">Correo</dt>
                 <dd className="mt-1 text-base">{CHUMES_STOREFRONT.email}</dd>
               </div>
             ) : null}
+            {CHUMES_STOREFRONT.instagram ? (
+              <div>
+                <dt className="text-muted-foreground">Instagram</dt>
+                <dd className="mt-1">
+                  <a
+                    href={CHUMES_STOREFRONT.instagram}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-brand"
+                  >
+                    {CHUMES_STOREFRONT.instagram}
+                  </a>
+                </dd>
+              </div>
+            ) : null}
           </dl>
         </div>
 
-        <div className="rounded-3xl border border-border/70 bg-card p-8">
-          <h2 className="text-xl font-semibold">¿Prefiere cotizar en línea?</h2>
+        <div className="border border-arena/80 bg-ivory p-8">
+          <h2 className="font-heading text-2xl">Cotizá en el sitio</h2>
           <p className="mt-3 text-muted-foreground">
-            Arme su lista de productos en el catálogo y envíenos la solicitud con
-            un solo formulario.
+            Armá tu evento en el catálogo, envianos la solicitud y te llega como
+            lead. Si preferís, también podés escribirnos.
           </p>
-          <div className="mt-6 flex flex-wrap gap-3">
-            <a
+          <div className="mt-8 flex flex-col gap-3">
+            <Link
+              href="/cotizar"
+              className="inline-flex h-12 items-center justify-center rounded-full bg-brand text-sm text-ivory hover:bg-brand-deep"
+            >
+              Cotizar mi evento
+            </Link>
+            <Link
               href="/catalogo"
-              className={cn(buttonVariants({ variant: "commit" }), "rounded-full px-6")}
+              className="inline-flex h-12 items-center justify-center rounded-full border border-arena text-sm text-brand"
             >
               Ver catálogo
+            </Link>
+            <a
+              href={whatsappHref}
+              target={hasWhatsAppNumber() ? "_blank" : undefined}
+              rel={hasWhatsAppNumber() ? "noreferrer" : undefined}
+              className="inline-flex h-12 items-center justify-center rounded-full border border-arena text-sm text-brand"
+            >
+              WhatsApp
             </a>
-            {whatsappUrl ? (
-              <a
-                href={whatsappUrl}
-                target="_blank"
-                rel="noreferrer"
-                className={cn(buttonVariants({ variant: "outline" }), "rounded-full px-6")}
-              >
-                WhatsApp
-              </a>
-            ) : null}
           </div>
         </div>
       </section>

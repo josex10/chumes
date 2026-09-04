@@ -1,29 +1,38 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { UserRound, X } from "lucide-react";
 import { parseEventsPipelineTab } from "@/lib/events/constants";
 import { buildEventsHref } from "@/lib/events/events-url";
 import { CustomerCombobox } from "@/components/quotes/customer-combobox";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import type { CustomerWithRelations } from "@/lib/supabase/types";
+import { cn } from "@/lib/utils";
 
 type EventsToolbarProps = {
   customerId?: string;
+  source?: string;
   defaultCustomer?: CustomerWithRelations | null;
 };
 
-export function EventsToolbar({ customerId, defaultCustomer }: EventsToolbarProps) {
+export function EventsToolbar({
+  customerId,
+  source,
+  defaultCustomer,
+}: EventsToolbarProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const tab = parseEventsPipelineTab(searchParams.get("tab") ?? undefined);
 
   function updateCustomerFilter(nextCustomerId: string) {
     router.push(
       buildEventsHref({
-        tab: parseEventsPipelineTab(searchParams.get("tab") ?? undefined),
+        tab,
         customerId: nextCustomerId || undefined,
+        source,
       }),
     );
   }
@@ -47,12 +56,29 @@ export function EventsToolbar({ customerId, defaultCustomer }: EventsToolbarProp
               id="events-customer-filter"
             />
           </div>
-          {customerId ? (
+          <Link
+            href={buildEventsHref({
+              tab,
+              customerId,
+              source: source === "WEBSITE" ? undefined : "WEBSITE",
+            })}
+            className={cn(
+              buttonVariants({ variant: "outline", size: "sm" }),
+              "inline-flex h-8 items-center gap-1.5",
+              source === "WEBSITE" &&
+                "border-sky-500/40 bg-sky-500/10 text-sky-800 dark:text-sky-300",
+            )}
+          >
+            Sitio web
+          </Link>
+          {customerId || source ? (
             <Button
               type="button"
               variant="outline"
               className="inline-flex h-8 items-center gap-1.5"
-              onClick={() => updateCustomerFilter("")}
+              onClick={() =>
+                router.push(buildEventsHref({ tab }))
+              }
             >
               <X className="size-4" />
               Limpiar

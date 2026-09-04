@@ -246,11 +246,17 @@ export async function submitQuoteRequest(
     const now = new Date().toISOString();
     const eventTitle = `Solicitud web — ${parsed.data.name.trim()}`;
     const eventNotes = [
-      parsed.data.notes?.trim(),
-      "Solicitud recibida desde el catálogo público.",
+      "Solicitud recibida desde el sitio web.",
+      parsed.data.inquiry_type === "corporativo"
+        ? "Tipo: evento corporativo"
+        : null,
+      parsed.data.guest_count
+        ? `Personas: ${parsed.data.guest_count}`
+        : null,
+      parsed.data.notes?.trim() || null,
     ]
       .filter(Boolean)
-      .join("\n\n");
+      .join("\n");
 
     const { data: event, error: eventError } = await supabase
       .from("events")
@@ -291,7 +297,7 @@ export async function submitQuoteRequest(
         subtotal: totals.subtotal,
         tax_total: totals.tax_total,
         total: totals.total,
-        notes: parsed.data.notes?.trim() || null,
+        notes: eventNotes || null,
         created_by: null,
         updated_by: null,
       })

@@ -8,6 +8,7 @@ import {
   CalendarDays,
   Circle,
   FileText,
+  Globe,
   GripVertical,
   Megaphone,
   Phone,
@@ -45,6 +46,7 @@ const badgeIcons = {
   "dates-pending": CalendarDays,
   "follow-up-due": AlertTriangle,
   "quote-status": FileText,
+  website: Globe,
 };
 
 function EventInvoiceStatus({ event }: { event: EventWithRelations }) {
@@ -162,7 +164,15 @@ export function EventKanbanCard({
           </p>
           <p className="mt-1 flex items-center gap-1.5 truncate text-xs text-muted-foreground">
             <Megaphone className="size-3.5 shrink-0" />
-            <span className="truncate">{event.event_sources.name}</span>
+            <span
+              className={cn(
+                "truncate",
+                event.event_sources.code === "WEBSITE" &&
+                  "font-medium text-sky-700 dark:text-sky-300",
+              )}
+            >
+              {event.event_sources.name}
+            </span>
           </p>
           {linkedQuote ? (
             <p className="mt-1 text-sm font-semibold">

@@ -1,35 +1,25 @@
 import type { Metadata } from "next";
-import Link from "next/link";
-import { StoreHero } from "@/app/(public)/layout";
-import { buttonVariants } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { QuoteSuccessActions } from "@/components/storefront/quote-success-actions";
+import { SectionHeading } from "@/components/storefront/section-heading";
 
 export const metadata: Metadata = {
   title: "Solicitud enviada",
+  robots: {
+    index: false,
+    follow: false,
+  },
 };
 
 export default function QuoteSuccessPage() {
   return (
-    <>
-      <StoreHero
-        eyebrow="Gracias"
-        title="Recibimos su solicitud"
-        description="Nuestro equipo revisará los productos seleccionados y se comunicará con usted para confirmar fecha, entrega y cotización final."
+    <section className="mx-auto w-full max-w-3xl px-5 py-20 md:px-6 md:py-28">
+      <SectionHeading
+        as="h1"
+        eyebrow="Listo"
+        title="Recibimos tu solicitud."
+        description="Ya nos llegó como un lead del sitio web. Te vamos a escribir para confirmar fecha, entrega y la cotización final."
       />
-      <section className="mx-auto flex w-full max-w-6xl gap-4 px-6 pb-20">
-        <Link
-          href="/catalogo"
-          className={cn(buttonVariants({ variant: "commit" }), "rounded-full px-6")}
-        >
-          Seguir explorando
-        </Link>
-        <Link
-          href="/contacto"
-          className={cn(buttonVariants({ variant: "outline" }), "rounded-full px-6")}
-        >
-          Contacto
-        </Link>
-      </section>
-    </>
+      <QuoteSuccessActions />
+    </section>
   );
 }

@@ -167,7 +167,16 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
               </div>
               <div className="min-w-0 space-y-1">
                 <p className="text-sm text-muted-foreground">Fuente</p>
-                <p className="font-medium">{event.event_sources.name}</p>
+                <p
+                  className={
+                    event.event_sources.code === "WEBSITE"
+                      ? "font-medium text-sky-700 dark:text-sky-300"
+                      : "font-medium"
+                  }
+                >
+                  {event.event_sources.name}
+                  {event.event_sources.code === "WEBSITE" ? " · lead del sitio" : ""}
+                </p>
               </div>
               <div className="min-w-0 space-y-1">
                 <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
@@ -179,7 +188,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
               {event.notes && (
                 <div className="min-w-0 space-y-1 sm:col-span-2">
                   <p className="text-sm text-muted-foreground">Notas</p>
-                  <p className="font-medium">{event.notes}</p>
+                  <p className="font-medium whitespace-pre-wrap">{event.notes}</p>
                 </div>
               )}
             </CardContent>

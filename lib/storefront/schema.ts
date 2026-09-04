@@ -26,6 +26,11 @@ export const quoteRequestSchema = z.object({
     .or(z.literal("")),
   event_date: z.string().trim().optional(),
   estimated_location: z.string().trim().optional(),
+  guest_count: z.preprocess(
+    (value) => (value === "" || value === null || value === undefined ? undefined : value),
+    z.coerce.number().int().positive("La cantidad de personas debe ser mayor a cero").optional(),
+  ),
+  inquiry_type: z.string().trim().optional(),
   notes: z.string().trim().optional(),
   items: z.array(cartLineSchema).min(1, "Agregue al menos un producto"),
   website: z.string().optional(),

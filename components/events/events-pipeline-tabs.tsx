@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 type EventsPipelineTabsProps = {
   activeTab: EventsPipelineTab;
   customerId?: string;
+  source?: string;
 };
 
 const TABS: {
@@ -26,6 +27,7 @@ const TABS: {
 export function EventsPipelineTabs({
   activeTab,
   customerId,
+  source,
 }: EventsPipelineTabsProps) {
   return (
     <div className="inline-flex rounded-lg border bg-muted/30 p-1">
@@ -37,6 +39,7 @@ export function EventsPipelineTabs({
             href={buildEventsHref({
               tab: tab.id,
               customerId,
+              source,
             })}
             className={cn(
               buttonVariants({ variant: "ghost", size: "sm" }),

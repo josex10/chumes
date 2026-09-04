@@ -91,6 +91,7 @@ export async function getEventStatuses(): Promise<EventStatus[]> {
 
 export type GetEventsOptions = {
   customerId?: string;
+  sourceCode?: string;
   phases?: EventPhase[];
 };
 
@@ -195,6 +196,17 @@ export async function getEvents(
 
   if (options.customerId) {
     builder = builder.eq("customer_id", options.customerId);
+  }
+
+  if (options.sourceCode) {
+    const { data: source } = await supabase
+      .from("event_sources")
+      .select("id")
+      .eq("code", options.sourceCode)
+      .maybeSingle();
+
+    if (!source) return [];
+    builder = builder.eq("source_id", source.id);
   }
 
   if (options.phases?.length) {

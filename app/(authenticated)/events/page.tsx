@@ -26,6 +26,7 @@ type EventsPageProps = {
   searchParams: Promise<{
     tab?: string;
     customerId?: string;
+    source?: string;
     from?: string;
     to?: string;
     archiveType?: string;
@@ -42,6 +43,7 @@ export default async function EventsPage({ searchParams }: EventsPageProps) {
   const {
     tab: tabParam,
     customerId,
+    source,
     from,
     to,
     archiveType: archiveTypeParam,
@@ -53,7 +55,9 @@ export default async function EventsPage({ searchParams }: EventsPageProps) {
   const page = Math.max(1, Number(pageParam) || 1);
   const isHistory = tab === EVENTS_PIPELINE_TAB.HISTORY;
   const hasActiveFilters = Boolean(
-    customerId || (isHistory && (from || to || archiveType)),
+    customerId ||
+      source === "WEBSITE" ||
+      (isHistory && (from || to || archiveType)),
   );
 
   const [statuses, events, archived, defaultCustomer] = await Promise.all([
@@ -62,6 +66,7 @@ export default async function EventsPage({ searchParams }: EventsPageProps) {
       ? Promise.resolve([])
       : getEvents({
           customerId,
+          sourceCode: source === "WEBSITE" ? "WEBSITE" : undefined,
           phases: [EVENT_PHASE.COMMERCIAL, EVENT_PHASE.OPERATIONAL],
         }),
     isHistory
@@ -150,7 +155,11 @@ export default async function EventsPage({ searchParams }: EventsPageProps) {
             dateTo={to}
             archiveType={archiveType}
             tabs={
-              <EventsPipelineTabs activeTab={tab} customerId={customerId} />
+              <EventsPipelineTabs
+                activeTab={tab}
+                customerId={customerId}
+                source={source}
+              />
             }
             hasActiveFilters={hasActiveFilters}
           />
@@ -160,12 +169,17 @@ export default async function EventsPage({ searchParams }: EventsPageProps) {
           <EventsCollapsibleFilters
             hasActiveFilters={hasActiveFilters}
             toolbar={
-              <EventsPipelineTabs activeTab={tab} customerId={customerId} />
+              <EventsPipelineTabs
+                activeTab={tab}
+                customerId={customerId}
+                source={source}
+              />
             }
           >
             <Suspense fallback={<div className="h-20 rounded-xl bg-muted" />}>
               <EventsToolbar
                 customerId={customerId}
+                source={source}
                 defaultCustomer={defaultCustomer}
               />
             </Suspense>

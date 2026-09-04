@@ -5,7 +5,7 @@ import { useCart } from "@/components/storefront/cart-provider";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-export function CartButton() {
+export function CartButton({ className }: { className?: string }) {
   const { itemCount } = useCart();
 
   return (
@@ -13,10 +13,11 @@ export function CartButton() {
       href="/cotizar"
       className={cn(
         buttonVariants({ variant: "outline", size: "sm" }),
-        "rounded-full px-4",
+        "rounded-full border-arena px-4",
+        className,
       )}
     >
-      Cotizar{itemCount > 0 ? ` (${itemCount})` : ""}
+      Mi evento{itemCount > 0 ? ` (${itemCount})` : ""}
     </Link>
   );
 }

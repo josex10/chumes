@@ -1,7 +1,12 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import { CatalogFilters } from "@/components/storefront/catalog-filters";
 import { ProductCard } from "@/components/storefront/product-card";
-import { StoreHero } from "@/app/(public)/layout";
+import { SectionHeading } from "@/components/storefront/section-heading";
+import {
+  filterCatalogProducts,
+  resolveCatalogFilters,
+  type CatalogSearchParams,
+} from "@/lib/storefront/catalog";
 import {
   getPublicProductCategories,
   getPublicProducts,
@@ -9,67 +14,48 @@ import {
 
 export const metadata: Metadata = {
   title: "Catálogo",
-  description: "Catálogo de mantelería, mobiliario y accesorios para eventos.",
+  description:
+    "Explorá nuestras mesas, sillas, mantelería, combos y equipo para eventos.",
 };
 
 type CatalogPageProps = {
-  searchParams: Promise<{ categoria?: string }>;
+  searchParams: Promise<CatalogSearchParams>;
 };
 
 export default async function CatalogPage({ searchParams }: CatalogPageProps) {
   const params = await searchParams;
-  const categoryId = params.categoria ? Number(params.categoria) : undefined;
   const [products, categories] = await Promise.all([
-    getPublicProducts(
-      categoryId && !Number.isNaN(categoryId) ? { categoryId } : undefined,
-    ),
+    getPublicProducts(),
     getPublicProductCategories(),
   ]);
+  const filters = resolveCatalogFilters(params, categories);
+  const visible = filterCatalogProducts(products, filters);
 
   return (
     <>
-      <StoreHero
-        eyebrow="Catálogo"
-        title="Productos para eventos"
-        description="Consulte precios de alquiler y venta, y arme su solicitud de cotización en línea."
-      />
-
-      <section className="mx-auto w-full max-w-6xl px-6 pb-8">
-        <div className="flex flex-wrap gap-3">
-          <Link
-            href="/catalogo"
-            className={`rounded-full border px-4 py-2 text-sm transition ${
-              !categoryId
-                ? "border-foreground bg-foreground text-background"
-                : "border-border/70 bg-card hover:bg-muted"
-            }`}
-          >
-            Todos
-          </Link>
-          {categories.map((category) => (
-            <Link
-              key={category.id}
-              href={`/catalogo?categoria=${category.id}`}
-              className={`rounded-full border px-4 py-2 text-sm transition ${
-                categoryId === category.id
-                  ? "border-foreground bg-foreground text-background"
-                  : "border-border/70 bg-card hover:bg-muted"
-              }`}
-            >
-              {category.name}
-            </Link>
-          ))}
+      <section className="mx-auto w-full max-w-6xl px-5 pt-14 pb-8 md:px-6 md:pt-20">
+        <SectionHeading
+          as="h1"
+          eyebrow="Catálogo"
+          title="Encontrá todo lo que necesitás para tu evento."
+          description="Explorá nuestras mesas, sillas, mantelería, combos y equipo."
+        />
+        <div className="mt-10">
+          <CatalogFilters categories={categories} filters={filters} />
         </div>
       </section>
 
-      <section className="mx-auto w-full max-w-6xl px-6 pb-20">
-        {products.length === 0 ? (
-          <div className="rounded-3xl border border-dashed border-border/80 px-8 py-16 text-center text-muted-foreground">
-            No hay productos publicados en esta categoría.
+      <section className="mx-auto w-full max-w-6xl px-5 pb-24 md:px-6">
+        {visible.length === 0 ? (
+          <div className="border border-dashed border-arena px-6 py-16 text-center text-muted-foreground">
+            No hay productos publicados con estos filtros.
+            {filters.category || filters.typeSlug || filters.priceSlug
+              ? " Probá quitar un filtro o cotizá y te ayudamos a elegir."
+              : " Pronto publicaremos el catálogo."}
           </div>
         ) : (
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {products.map((product) => (
+          <div className="grid gap-x-6 gap-y-12 sm:grid-cols-2 lg:grid-cols-3">
+            {visible.map((product) => (
               <ProductCard key={product.id} product={product} />
             ))}
           </div>

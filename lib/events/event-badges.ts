@@ -24,6 +24,14 @@ export function getEventBadges(event: EventWithRelations): EventBadge[] {
   const badges: EventBadge[] = [];
   const linkedQuote = getLinkedQuote(event);
 
+  if (event.event_sources?.code === "WEBSITE") {
+    badges.push({
+      key: "website",
+      label: "Sitio web",
+      variant: "info",
+    });
+  }
+
   if (!linkedQuote) {
     badges.push({
       key: "no-quote",

@@ -7,6 +7,7 @@ import {
 export type EventsPageQuery = {
   tab?: EventsPipelineTab;
   customerId?: string;
+  source?: string;
   dateFrom?: string;
   dateTo?: string;
   archiveType?: EventArchiveType;
@@ -22,6 +23,10 @@ export function buildEventsHref(query: EventsPageQuery): string {
 
   if (query.customerId) {
     params.set("customerId", query.customerId);
+  }
+
+  if (query.source) {
+    params.set("source", query.source);
   }
 
   if (query.tab === EVENTS_PIPELINE_TAB.HISTORY) {
