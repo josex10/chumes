@@ -23,6 +23,7 @@ import {
   Table,
   TableBody,
   TableCell,
+  TableFooter,
   TableHead,
   TableHeader,
   TableRow,
@@ -34,6 +35,7 @@ import {
 } from "@/lib/follow-ups/actions";
 import { FOLLOW_UP_BUCKET } from "@/lib/follow-ups/constants";
 import type { FollowUpQueueItem } from "@/lib/follow-ups/types";
+import { formatCurrency } from "@/lib/quotes/format";
 import type { FollowUpTemplate } from "@/lib/supabase/types";
 import { cn } from "@/lib/utils";
 
@@ -92,6 +94,36 @@ type FollowUpQueueTableProps = {
   templates: FollowUpTemplate[];
 };
 
+function sumQuoteTotals(items: FollowUpQueueItem[]) {
+  return items.reduce((sum, item) => sum + (item.quoteTotal ?? 0), 0);
+}
+
+function pendingLabel(count: number) {
+  return count === 1 ? "1 pendiente" : `${count} pendientes`;
+}
+
+function FollowUpAmount({
+  amount,
+  className,
+}: {
+  amount: number | null;
+  className?: string;
+}) {
+  if (amount == null || !Number.isFinite(amount)) {
+    return (
+      <span className={cn("text-sm text-muted-foreground", className)}>
+        Sin cotización
+      </span>
+    );
+  }
+
+  return (
+    <span className={cn("font-semibold tabular-nums tracking-tight", className)}>
+      {formatCurrency(amount)}
+    </span>
+  );
+}
+
 function toMessageContext(
   item: FollowUpQueueItem,
   adHoc: boolean,
@@ -122,6 +154,7 @@ export function FollowUpQueueTable({
   const meta = BUCKET_META[bucket];
   const Icon = meta.icon;
   const isCloseThisWeek = bucket === FOLLOW_UP_BUCKET.CLOSE_THIS_WEEK;
+  const bucketTotal = sumQuoteTotals(items);
   const sendContext = sendItem
     ? toMessageContext(sendItem, isCloseThisWeek)
     : null;
@@ -168,6 +201,16 @@ export function FollowUpQueueTable({
             {meta.title}
             <span className="ml-2 text-sm font-normal text-muted-foreground">
               {items.length}
+              {items.length > 0 ? (
+                <>
+                  {" · "}
+                  <span
+                    className={cn("font-medium tabular-nums", meta.iconClass)}
+                  >
+                    {formatCurrency(bucketTotal)}
+                  </span>
+                </>
+              ) : null}
             </span>
           </h2>
           <p className="text-sm text-muted-foreground">{meta.description}</p>
@@ -192,6 +235,7 @@ export function FollowUpQueueTable({
                 <TableHead>Teléfono</TableHead>
                 <TableHead>Estado</TableHead>
                 <TableHead>{isCloseThisWeek ? "Fecha" : "Vencimiento"}</TableHead>
+                <TableHead className="text-right">Monto</TableHead>
                 <TableHead className="text-right">Acciones</TableHead>
               </TableRow>
             </TableHeader>
@@ -268,6 +312,9 @@ export function FollowUpQueueTable({
                       </span>
                     </TableCell>
                     <TableCell className="text-right">
+                      <FollowUpAmount amount={item.quoteTotal} />
+                    </TableCell>
+                    <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-1.5">
                         {item.step || isCloseThisWeek ? (
                           <Button
@@ -324,6 +371,20 @@ export function FollowUpQueueTable({
                 );
               })}
             </TableBody>
+            <TableFooter>
+              <TableRow>
+                <TableCell
+                  colSpan={5}
+                  className="text-right text-muted-foreground"
+                >
+                  Total
+                </TableCell>
+                <TableCell className="text-right font-semibold tabular-nums tracking-tight">
+                  {formatCurrency(bucketTotal)}
+                </TableCell>
+                <TableCell />
+              </TableRow>
+            </TableFooter>
           </Table>
         </div>
       )}
@@ -351,28 +412,52 @@ export function FollowUpQueueTable({
   );
 }
 
+type FollowUpQueueTotals = {
+  closeThisWeek: number;
+  step1: number;
+  step2: number;
+  step3: number;
+  noResponse: number;
+};
+
 export function FollowUpQueueSummary({
   counts,
+  totals,
 }: {
-  counts: {
-    closeThisWeek: number;
-    step1: number;
-    step2: number;
-    step3: number;
-    noResponse: number;
-  };
+  counts: FollowUpQueueTotals;
+  totals: FollowUpQueueTotals;
 }) {
   const cards = [
-    { bucket: FOLLOW_UP_BUCKET.CLOSE_THIS_WEEK, count: counts.closeThisWeek },
-    { bucket: FOLLOW_UP_BUCKET.STEP_1, count: counts.step1 },
-    { bucket: FOLLOW_UP_BUCKET.STEP_2, count: counts.step2 },
-    { bucket: FOLLOW_UP_BUCKET.STEP_3, count: counts.step3 },
-    { bucket: FOLLOW_UP_BUCKET.NO_RESPONSE, count: counts.noResponse },
+    {
+      bucket: FOLLOW_UP_BUCKET.CLOSE_THIS_WEEK,
+      count: counts.closeThisWeek,
+      total: totals.closeThisWeek,
+    },
+    {
+      bucket: FOLLOW_UP_BUCKET.STEP_1,
+      count: counts.step1,
+      total: totals.step1,
+    },
+    {
+      bucket: FOLLOW_UP_BUCKET.STEP_2,
+      count: counts.step2,
+      total: totals.step2,
+    },
+    {
+      bucket: FOLLOW_UP_BUCKET.STEP_3,
+      count: counts.step3,
+      total: totals.step3,
+    },
+    {
+      bucket: FOLLOW_UP_BUCKET.NO_RESPONSE,
+      count: counts.noResponse,
+      total: totals.noResponse,
+    },
   ] as const;
 
   return (
     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-      {cards.map(({ bucket, count }) => {
+      {cards.map(({ bucket, count, total }) => {
         const meta = BUCKET_META[bucket];
         const Icon = meta.icon;
         return (
@@ -381,16 +466,24 @@ export function FollowUpQueueSummary({
             href={`#seguimiento-${bucket.toLowerCase()}`}
             className="rounded-xl border bg-card p-4 transition hover:bg-muted/40"
           >
-            <div className="flex items-center justify-between gap-3">
-              <div>
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
                 <p className="text-sm text-muted-foreground">{meta.title}</p>
-                <p className="mt-1 text-2xl font-semibold tabular-nums">
-                  {count}
+                <p
+                  className={cn(
+                    "mt-1 text-xl font-semibold tracking-tight tabular-nums sm:text-2xl",
+                    meta.iconClass,
+                  )}
+                >
+                  {formatCurrency(total)}
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {pendingLabel(count)}
                 </p>
               </div>
               <span
                 className={cn(
-                  "inline-flex size-10 items-center justify-center rounded-full border",
+                  "inline-flex size-10 shrink-0 items-center justify-center rounded-full border",
                   meta.accent,
                 )}
               >

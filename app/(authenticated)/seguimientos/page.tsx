@@ -10,8 +10,13 @@ import {
   getFollowUpQueue,
   getFollowUpTemplates,
 } from "@/lib/follow-ups/queries";
+import type { FollowUpQueueItem } from "@/lib/follow-ups/types";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+
+function sumQuoteTotals(items: FollowUpQueueItem[]) {
+  return items.reduce((sum, item) => sum + (item.quoteTotal ?? 0), 0);
+}
 
 export const dynamic = "force-dynamic";
 
@@ -54,6 +59,13 @@ export default async function SeguimientosPage() {
           step2: queue.step2.length,
           step3: queue.step3.length,
           noResponse: queue.noResponse.length,
+        }}
+        totals={{
+          closeThisWeek: sumQuoteTotals(queue.closeThisWeek),
+          step1: sumQuoteTotals(queue.step1),
+          step2: sumQuoteTotals(queue.step2),
+          step3: sumQuoteTotals(queue.step3),
+          noResponse: sumQuoteTotals(queue.noResponse),
         }}
       />
 
