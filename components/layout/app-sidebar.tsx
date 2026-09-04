@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   CalendarDays,
+  ChartColumn,
   FileText,
   LayoutDashboard,
   MessageCircleMore,
@@ -18,6 +19,7 @@ import { Button } from "@/components/ui/button";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/reportes", label: "Reportes", icon: ChartColumn },
   { href: "/events", label: "Eventos", icon: CalendarDays },
   { href: "/seguimientos", label: "Seguimientos", icon: MessageCircleMore },
   { href: "/logistica", label: "Logística", icon: Truck },
