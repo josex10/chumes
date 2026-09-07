@@ -109,3 +109,41 @@ export function parseEventArchiveType(
 export function isArchivedStatus(statusCode: string): boolean {
   return ARCHIVED_STATUS_CODES.includes(statusCode as EventStatusCode);
 }
+
+export const LOST_REASON = {
+  NO_RESPONSE: "NO_RESPONSE",
+  NO_INVENTORY: "NO_INVENTORY",
+  OVER_BUDGET: "OVER_BUDGET",
+  OTHER_VENDOR: "OTHER_VENDOR",
+  EVENT_CANCELLED: "EVENT_CANCELLED",
+  DATES_UNAVAILABLE: "DATES_UNAVAILABLE",
+  OTHER: "OTHER",
+} as const;
+
+export type LostReasonCode = (typeof LOST_REASON)[keyof typeof LOST_REASON];
+
+export const LOST_REASON_OPTIONS: {
+  code: LostReasonCode;
+  label: string;
+}[] = [
+  { code: LOST_REASON.NO_RESPONSE, label: "Sin respuesta" },
+  { code: LOST_REASON.NO_INVENTORY, label: "Sin inventario" },
+  { code: LOST_REASON.OVER_BUDGET, label: "Se pasó de presupuesto" },
+  { code: LOST_REASON.OTHER_VENDOR, label: "Eligió a otro proveedor" },
+  { code: LOST_REASON.EVENT_CANCELLED, label: "Canceló el evento" },
+  { code: LOST_REASON.DATES_UNAVAILABLE, label: "Fechas no disponibles" },
+  { code: LOST_REASON.OTHER, label: "Otro" },
+];
+
+export function resolveLostReason(
+  code: string,
+  customText?: string,
+): string | null {
+  if (code === LOST_REASON.OTHER) {
+    const custom = customText?.trim() ?? "";
+    return custom.length > 0 ? custom : null;
+  }
+
+  const option = LOST_REASON_OPTIONS.find((item) => item.code === code);
+  return option?.label ?? null;
+}

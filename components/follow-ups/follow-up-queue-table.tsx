@@ -35,6 +35,7 @@ import {
 } from "@/lib/follow-ups/actions";
 import { FOLLOW_UP_BUCKET } from "@/lib/follow-ups/constants";
 import type { FollowUpQueueItem } from "@/lib/follow-ups/types";
+import { LOST_REASON } from "@/lib/events/constants";
 import { formatCurrency } from "@/lib/quotes/format";
 import type { FollowUpTemplate } from "@/lib/supabase/types";
 import { cn } from "@/lib/utils";
@@ -171,11 +172,11 @@ export function FollowUpQueueTable({
     });
   }
 
-  function handleLost() {
-    if (!lostEventId) return;
+  function handleLost(lostReason?: string) {
+    if (!lostEventId || !lostReason) return;
     setError(null);
     startTransition(async () => {
-      const result = await markEventLostFromFollowUp(lostEventId);
+      const result = await markEventLostFromFollowUp(lostEventId, lostReason);
       if (!result.success) {
         setError(result.error);
         return;
@@ -406,6 +407,7 @@ export function FollowUpQueueTable({
           if (!open) setLostEventId(null);
         }}
         pending={isPending}
+        defaultReasonCode={LOST_REASON.NO_RESPONSE}
         onConfirm={handleLost}
       />
     </section>

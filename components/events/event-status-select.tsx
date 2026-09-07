@@ -16,10 +16,14 @@ import {
 import type { EventStatus } from "@/lib/supabase/types";
 import { cn } from "@/lib/utils";
 
+type EventStatusChangeOptions = {
+  lostReason?: string;
+};
+
 type EventStatusSelectProps = {
   statuses: EventStatus[];
   value: string;
-  onValueChange: (statusCode: string) => void;
+  onValueChange: (statusCode: string, options?: EventStatusChangeOptions) => void;
   disabled?: boolean;
   pending?: boolean;
   size?: "card" | "default";
@@ -160,7 +164,7 @@ export function EventStatusSelect({
           if (!nextOpen) setConfirmArchive(null);
         }}
         pending={pending}
-        onConfirm={() => {
+        onConfirm={(lostReason) => {
           const kind = confirmArchive;
           setConfirmArchive(null);
           if (kind === "won") {
@@ -168,7 +172,7 @@ export function EventStatusSelect({
             return;
           }
           if (kind === "lost") {
-            onValueChange(EVENT_STATUS.LOST);
+            onValueChange(EVENT_STATUS.LOST, { lostReason });
           }
         }}
       />

@@ -17,7 +17,11 @@ type EventKanbanColumnProps = {
   status: EventStatus;
   events: EventWithRelations[];
   selectableStatuses: EventStatus[];
-  onStatusChange: (eventId: string, nextStatusCode: string) => void;
+  onStatusChange: (
+    eventId: string,
+    nextStatusCode: string,
+    options?: { lostReason?: string },
+  ) => void;
   pendingEventId?: string | null;
 };
 

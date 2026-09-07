@@ -42,12 +42,15 @@ export function EventStatusActions({
     phase === EVENT_PHASE.COMMERCIAL ||
     (phase === EVENT_PHASE.OPERATIONAL && !isCompleted);
 
-  function handleStatusChange(nextStatusCode: string) {
+  function handleStatusChange(
+    nextStatusCode: string,
+    options?: { lostReason?: string },
+  ) {
     if (nextStatusCode === event.event_statuses.code) return;
 
     setError(null);
     startTransition(async () => {
-      const result = await updateEventStatus(event.id, nextStatusCode);
+      const result = await updateEventStatus(event.id, nextStatusCode, options);
       if (!result.success) {
         setError(result.error);
         return;
@@ -68,10 +71,14 @@ export function EventStatusActions({
     });
   }
 
-  function handleArchive(nextStatusCode: string) {
+  function handleArchive(nextStatusCode: string, lostReason?: string) {
     setError(null);
     startTransition(async () => {
-      const result = await updateEventStatus(event.id, nextStatusCode);
+      const result = await updateEventStatus(
+        event.id,
+        nextStatusCode,
+        lostReason ? { lostReason } : undefined,
+      );
       if (!result.success) {
         setError(result.error);
         return;
@@ -183,9 +190,9 @@ export function EventStatusActions({
           open={lostDialogOpen}
           onOpenChange={setLostDialogOpen}
           pending={isPending}
-          onConfirm={() => {
+          onConfirm={(lostReason) => {
             setLostDialogOpen(false);
-            handleArchive(EVENT_STATUS.LOST);
+            handleArchive(EVENT_STATUS.LOST, lostReason);
           }}
         />
       </CardContent>

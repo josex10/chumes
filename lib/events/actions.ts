@@ -302,7 +302,14 @@ export async function updateEventStatus(
     }
 
     if (nextStatusCode === EVENT_STATUS.LOST) {
-      updates.lost_reason = options?.lostReason?.trim() || null;
+      const lostReason = options?.lostReason?.trim() ?? "";
+      if (!lostReason) {
+        return {
+          success: false,
+          error: "El motivo de pérdida es obligatorio.",
+        };
+      }
+      updates.lost_reason = lostReason;
       updates.archived_at = now;
     }
 

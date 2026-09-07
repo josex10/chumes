@@ -9,7 +9,6 @@ import { updateEventStatus } from "@/lib/events/actions";
 import { getStatusPhase } from "@/lib/events/status-transitions";
 import { dateKeyToIso } from "@/lib/follow-ups/calendar";
 import {
-  DEFAULT_LOST_FOLLOW_UP_REASON,
   UNUSED_TEMPLATE_STEP,
   type FollowUpStep,
 } from "@/lib/follow-ups/constants";
@@ -291,9 +290,10 @@ export async function resumeEventFollowUp(eventId: string): Promise<ActionResult
 
 export async function markEventLostFromFollowUp(
   eventId: string,
+  lostReason: string,
 ): Promise<ActionResult> {
   const result = await updateEventStatus(eventId, EVENT_STATUS.LOST, {
-    lostReason: DEFAULT_LOST_FOLLOW_UP_REASON,
+    lostReason,
   });
 
   if (!result.success) return result;

@@ -20,9 +20,6 @@ export type FollowUpStep = 1 | 2 | 3;
 
 export const FOLLOW_UP_STEPS: FollowUpStep[] = [1, 2, 3];
 
-export const DEFAULT_LOST_FOLLOW_UP_REASON =
-  "Sin respuesta después de 3 seguimientos";
-
 export const UNUSED_TEMPLATE_STEP: FollowUpStep = 1;
 
 export function getFollowUpStepLabel(step: FollowUpStep): string {

@@ -129,7 +129,11 @@ export function EventsKanbanBoard({
     return () => scroller.removeEventListener("wheel", onWheel, true);
   }, []);
 
-  function moveEvent(eventId: string, nextStatusCode: string) {
+  function moveEvent(
+    eventId: string,
+    nextStatusCode: string,
+    options?: { lostReason?: string },
+  ) {
     const draggedEvent = events.find((item) => item.id === eventId);
     if (!draggedEvent) return;
 
@@ -144,7 +148,7 @@ export function EventsKanbanBoard({
     setError(null);
     setPendingEventId(eventId);
     startTransition(async () => {
-      const result = await updateEventStatus(eventId, nextStatusCode);
+      const result = await updateEventStatus(eventId, nextStatusCode, options);
       setPendingEventId(null);
       if (!result.success) {
         setError(result.error);

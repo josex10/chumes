@@ -31,7 +31,11 @@ type EventKanbanCardProps = {
   isDragOverlay?: boolean;
   showInvoiceStatus?: boolean;
   selectableStatuses?: EventStatus[];
-  onStatusChange?: (eventId: string, nextStatusCode: string) => void;
+  onStatusChange?: (
+    eventId: string,
+    nextStatusCode: string,
+    options?: { lostReason?: string },
+  ) => void;
   pending?: boolean;
 };
 
@@ -206,8 +210,8 @@ export function EventKanbanCard({
             statuses={selectableStatuses}
             value={event.event_statuses.code}
             pending={pending}
-            onValueChange={(nextStatusCode) =>
-              onStatusChange(event.id, nextStatusCode)
+            onValueChange={(nextStatusCode, options) =>
+              onStatusChange(event.id, nextStatusCode, options)
             }
           />
         </div>
