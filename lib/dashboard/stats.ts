@@ -1,4 +1,11 @@
 import { EVENT_PHASE } from "@/lib/events/constants";
+import {
+  addCalendarDays,
+  COSTA_RICA_OFFSET,
+  COSTA_RICA_TIMEZONE,
+  getCostaRicaWeekBounds,
+  toCostaRicaDateKey,
+} from "@/lib/follow-ups/calendar";
 import type {
   CustomerWithRelations,
   EventSource,
@@ -66,45 +73,38 @@ export type FinanceWeekStats = {
   events: FinanceEventRow[];
 };
 
-function startOfDay(date: Date): Date {
-  const d = new Date(date);
-  d.setHours(0, 0, 0, 0);
-  return d;
+function startOfCostaRicaDay(dateKey: string): Date {
+  return new Date(`${dateKey}T00:00:00${COSTA_RICA_OFFSET}`);
 }
 
-function endOfDay(date: Date): Date {
-  const d = new Date(date);
-  d.setHours(23, 59, 59, 999);
-  return d;
+function endOfCostaRicaDay(dateKey: string): Date {
+  return new Date(`${dateKey}T23:59:59.999${COSTA_RICA_OFFSET}`);
 }
 
-/** Monday 00:00 through Sunday 23:59 of the week containing reference (local time). */
+/** Monday 00:00 through Sunday 23:59 in Costa Rica of the week containing reference. */
 export function getWeekBounds(reference = new Date()): { start: Date; end: Date } {
-  const day = reference.getDay();
-  const diffToMonday = day === 0 ? -6 : 1 - day;
-  const monday = new Date(reference);
-  monday.setDate(reference.getDate() + diffToMonday);
-  const sunday = new Date(monday);
-  sunday.setDate(monday.getDate() + 6);
-  return { start: startOfDay(monday), end: endOfDay(sunday) };
+  const { startKey, endKey } = getCostaRicaWeekBounds(toCostaRicaDateKey(reference));
+  return { start: startOfCostaRicaDay(startKey), end: endOfCostaRicaDay(endKey) };
 }
 
 export function getWeekKey(reference = new Date()): string {
-  const { start } = getWeekBounds(reference);
-  return start.toISOString().slice(0, 10);
+  return getCostaRicaWeekBounds(toCostaRicaDateKey(reference)).startKey;
 }
 
 export function parseWeekKey(key: string): Date {
-  const [year, month, day] = key.split("-").map(Number);
-  return new Date(year, month - 1, day);
+  return new Date(`${key}T12:00:00${COSTA_RICA_OFFSET}`);
 }
 
 export function formatWeekRange(start: Date, end: Date): string {
   const formatter = new Intl.DateTimeFormat("es-CR", {
     day: "numeric",
     month: "short",
+    timeZone: COSTA_RICA_TIMEZONE,
   });
-  const yearFormatter = new Intl.DateTimeFormat("es-CR", { year: "numeric" });
+  const yearFormatter = new Intl.DateTimeFormat("es-CR", {
+    year: "numeric",
+    timeZone: COSTA_RICA_TIMEZONE,
+  });
   const startStr = formatter.format(start);
   const endStr = formatter.format(end);
   const year = yearFormatter.format(end);
@@ -117,18 +117,24 @@ function isWithinRange(isoDate: string, start: Date, end: Date): boolean {
 }
 
 function isDateWithinRange(dateStr: string, start: Date, end: Date): boolean {
-  const date = startOfDay(new Date(`${dateStr}T12:00:00`));
-  return date >= startOfDay(start) && date <= startOfDay(end);
+  const dateKey = dateStr.slice(0, 10);
+  return dateKey >= toCostaRicaDateKey(start) && dateKey <= toCostaRicaDateKey(end);
 }
 
 function buildWeekDays(start: Date): { dayLabel: string; dateKey: string }[] {
-  const formatter = new Intl.DateTimeFormat("es-CR", { weekday: "short" });
+  const startKey = toCostaRicaDateKey(start);
+  const formatter = new Intl.DateTimeFormat("es-CR", {
+    weekday: "short",
+    timeZone: "UTC",
+  });
   return Array.from({ length: 7 }, (_, index) => {
-    const date = new Date(start);
-    date.setDate(start.getDate() + index);
+    const dateKey = addCalendarDays(startKey, index);
+    const [year, month, day] = dateKey.split("-").map(Number);
     return {
-      dayLabel: formatter.format(date).replace(".", ""),
-      dateKey: date.toISOString().slice(0, 10),
+      dayLabel: formatter
+        .format(new Date(Date.UTC(year, month - 1, day, 12)))
+        .replace(".", ""),
+      dateKey,
     };
   });
 }
@@ -148,7 +154,7 @@ function buildDailySeries<T>(
   for (const item of items) {
     const isoDate = getDate(item);
     if (!isWithinRange(isoDate, weekStart, weekEnd)) continue;
-    const dateKey = isoDate.slice(0, 10);
+    const dateKey = toCostaRicaDateKey(isoDate);
     const bucket = buckets.get(dateKey);
     if (!bucket) continue;
     bucket.count += 1;
@@ -222,7 +228,7 @@ export function getLeadsWeekStats(
 
   for (const event of events) {
     if (!isWithinRange(event.created_at, start, end)) continue;
-    const dateKey = event.created_at.slice(0, 10);
+    const dateKey = toCostaRicaDateKey(event.created_at);
     const sourceName = event.event_sources?.name ?? "Otro";
     const dayBucket = buckets.get(dateKey);
     if (dayBucket) {

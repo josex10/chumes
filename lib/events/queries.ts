@@ -1,3 +1,4 @@
+import { toCostaRicaDateKey } from "@/lib/follow-ups/calendar";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import {
   EVENT_ARCHIVE_TYPE,
@@ -157,8 +158,8 @@ export async function getEventsByEventDateBetween(
   end: Date,
 ): Promise<EventWithRelations[]> {
   const supabase = createAdminSupabaseClient();
-  const startKey = start.toISOString().slice(0, 10);
-  const endKey = end.toISOString().slice(0, 10);
+  const startKey = toCostaRicaDateKey(start);
+  const endKey = toCostaRicaDateKey(end);
 
   const { data: operationalStatuses } = await supabase
     .from("event_statuses")

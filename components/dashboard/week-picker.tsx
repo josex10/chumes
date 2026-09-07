@@ -3,7 +3,8 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
-import { getWeekKey, parseWeekKey } from "@/lib/dashboard/stats";
+import { getWeekKey } from "@/lib/dashboard/stats";
+import { addCalendarDays } from "@/lib/follow-ups/calendar";
 import { cn } from "@/lib/utils";
 
 type WeekPickerProps = {
@@ -15,22 +16,18 @@ export function WeekPicker({ weekKey, weekRange }: WeekPickerProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  function navigateToWeek(reference: Date) {
+  function navigateToWeekKey(nextWeekKey: string) {
     const params = new URLSearchParams(searchParams.toString());
-    params.set("week", getWeekKey(reference));
+    params.set("week", nextWeekKey);
     router.push(`/dashboard?${params.toString()}`);
   }
 
   function goToPreviousWeek() {
-    const current = parseWeekKey(weekKey);
-    current.setDate(current.getDate() - 7);
-    navigateToWeek(current);
+    navigateToWeekKey(addCalendarDays(weekKey, -7));
   }
 
   function goToNextWeek() {
-    const current = parseWeekKey(weekKey);
-    current.setDate(current.getDate() + 7);
-    navigateToWeek(current);
+    navigateToWeekKey(addCalendarDays(weekKey, 7));
   }
 
   function goToCurrentWeek() {
