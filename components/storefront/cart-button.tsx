@@ -8,16 +8,20 @@ import { cn } from "@/lib/utils";
 export function CartButton({ className }: { className?: string }) {
   const { itemCount } = useCart();
 
+  if (itemCount === 0) {
+    return null;
+  }
+
   return (
     <Link
-      href="/cotizar"
+      href="/cotizar#evento"
       className={cn(
         buttonVariants({ variant: "outline", size: "sm" }),
         "rounded-full border-arena px-4 text-sm font-semibold tracking-wide",
         className,
       )}
     >
-      Mi evento{itemCount > 0 ? ` (${itemCount})` : ""}
+      Mi evento ({itemCount})
     </Link>
   );
 }

@@ -1,53 +1,64 @@
+import Image from "next/image";
 import Link from "next/link";
-import { StorefrontImage } from "@/components/storefront/storefront-image";
+import { STOREFRONT_HERO } from "@/lib/storefront/media";
 
 export function HomeHero() {
   return (
-    <section className="relative min-h-[88svh] overflow-hidden">
-      <StorefrontImage
-        placeholder="hero-montaje"
-        alt="Todo listo para que tu evento sea inolvidable."
-        priority
-        sizes="100vw"
-        className="absolute inset-0"
-      />
-      <div className="absolute inset-0 bg-charcoal/35" />
-      <div className="relative mx-auto flex min-h-[88svh] w-full max-w-6xl flex-col justify-end px-5 pb-20 md:px-6 md:pb-24">
-        <p className="text-[0.7rem] tracking-[0.32em] text-brand-gold-soft uppercase">
-          Gran Área Metropolitana
-        </p>
-        <h1 className="font-heading mt-4 max-w-3xl text-4xl leading-[1.05] font-medium text-ivory md:text-6xl">
-          Todo listo para que tu evento sea inolvidable.
-        </h1>
-        <p className="mt-5 max-w-xl text-base text-ivory/80 md:text-lg">
-          Alquiler de mesas, sillas, mantelería y equipo para eventos en la Gran
-          Área Metropolitana.
-        </p>
-        <div className="mt-8 flex flex-wrap gap-3">
-          <Link
-            href="/cotizar"
-            className="inline-flex h-12 items-center rounded-full bg-brand px-7 text-sm text-ivory transition hover:bg-brand-deep"
+    <section className="bg-ivory">
+      <div className="grid lg:min-h-[calc(100svh-7.25rem)] lg:grid-cols-2">
+        <div className="relative order-1 min-h-[48svh] overflow-hidden lg:order-2 lg:min-h-full">
+          <Image
+            src={STOREFRONT_HERO.src}
+            alt={STOREFRONT_HERO.alt}
+            fill
+            priority
+            sizes="(max-width: 1024px) 100vw, 50vw"
+            className="object-cover object-center"
+          />
+        </div>
+
+        <div className="relative order-2 flex flex-col items-start px-5 py-12 md:px-10 md:py-16 lg:order-1 lg:items-center lg:justify-center lg:px-12 lg:py-16 xl:px-16">
+          <div className="w-full max-w-md lg:text-center">
+            <h1 className="font-heading text-4xl leading-[1.18] font-medium tracking-tight text-charcoal md:text-5xl">
+              Hacemos que tu evento se sienta{" "}
+              <span className="font-script inline-block text-[1.28em] leading-none font-normal tracking-normal">
+                especial.
+              </span>
+            </h1>
+            <p className="mt-5 text-base text-muted-foreground md:text-lg">
+              Mobiliario, mesas, sillas y mantelería para crear el ambiente
+              perfecto en cada celebración.
+            </p>
+            <p className="mt-4 text-base font-semibold tracking-wide text-charcoal md:text-lg">
+              Calidad, estilo y simplicidad.
+            </p>
+            <div className="mt-8 flex flex-wrap gap-3 lg:justify-center">
+              <Link
+                href="/cotizar#formulario"
+                className="inline-flex h-12 items-center rounded-full bg-brand px-7 text-sm font-semibold tracking-wide text-ivory transition hover:bg-brand-deep"
+              >
+                Cotizar mi evento
+              </Link>
+              <Link
+                href="/catalogo"
+                className="inline-flex h-12 items-center rounded-full border border-arena px-7 text-sm font-semibold tracking-wide text-brand transition hover:border-brand hover:bg-brand/5"
+              >
+                Ver catálogo
+              </Link>
+            </div>
+          </div>
+          <a
+            href="#confianza"
+            className="mt-10 hidden w-fit flex-col items-center gap-2 text-muted-foreground lg:absolute lg:bottom-8 lg:left-1/2 lg:flex lg:-translate-x-1/2"
           >
-            Cotizar mi evento
-          </Link>
-          <Link
-            href="/catalogo"
-            className="inline-flex h-12 items-center rounded-full border border-ivory/40 px-7 text-sm text-ivory transition hover:border-ivory hover:bg-ivory/10"
-          >
-            Ver catálogo
-          </Link>
+            <span className="text-[0.65rem] tracking-[0.22em] uppercase">
+              Seguí explorando
+            </span>
+            <span className="storefront-scroll-cue h-8 w-px bg-brand/35" />
+            <span className="sr-only">Ir a la siguiente sección</span>
+          </a>
         </div>
       </div>
-      <a
-        href="#confianza"
-        className="absolute bottom-6 left-1/2 flex -translate-x-1/2 flex-col items-center gap-2 text-ivory/70"
-      >
-        <span className="text-[0.65rem] tracking-[0.22em] uppercase">
-          Seguí explorando
-        </span>
-        <span className="storefront-scroll-cue h-8 w-px bg-ivory/60" />
-        <span className="sr-only">Ir a la siguiente sección</span>
-      </a>
     </section>
   );
 }

@@ -107,7 +107,7 @@ export function AddToQuotePanel({ product }: AddToQuoteProps) {
 
       {added ? (
         <Link
-          href="/cotizar"
+          href="/cotizar#evento"
           className="mt-3 inline-flex h-12 w-full items-center justify-center rounded-full border border-arena text-sm text-brand"
         >
           Ver mi evento

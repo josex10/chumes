@@ -32,7 +32,7 @@ export const quoteRequestSchema = z.object({
   ),
   inquiry_type: z.string().trim().optional(),
   notes: z.string().trim().optional(),
-  items: z.array(cartLineSchema).min(1, "Agregue al menos un producto"),
+  items: z.array(cartLineSchema).default([]),
   website: z.string().optional(),
 });
 

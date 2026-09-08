@@ -84,7 +84,7 @@ export function StorefrontHeader() {
             <CartButton />
           </div>
           <Link
-            href="/cotizar"
+            href="/cotizar#formulario"
             className="hidden rounded-full bg-brand px-5 py-2 text-sm font-semibold tracking-wide text-ivory transition hover:bg-brand-deep sm:inline-flex"
           >
             Cotizar ahora
@@ -131,7 +131,7 @@ export function StorefrontHeader() {
           })}
           <div className="mt-4 flex flex-col gap-3">
             <Link
-              href="/cotizar"
+              href="/cotizar#formulario"
               className="inline-flex h-12 items-center justify-center rounded-full bg-brand text-sm font-semibold tracking-wide text-ivory"
             >
               Cotizar ahora

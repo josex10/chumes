@@ -18,7 +18,7 @@ export function QuoteSummary() {
   );
 
   return (
-    <section className="border border-arena/80 bg-ivory p-6 md:p-8">
+    <section id="evento" className="scroll-mt-32 border border-arena/80 bg-ivory p-6 md:p-8">
       <p className="text-[0.7rem] tracking-[0.22em] text-brand-gold uppercase">
         Resumen
       </p>

@@ -1,6 +1,6 @@
 import { ClerkProvider } from "@clerk/nextjs";
 import type { Metadata } from "next";
-import { Cormorant_Garamond, Geist_Mono, Inter } from "next/font/google";
+import { Cormorant_Garamond, Geist_Mono, Great_Vibes, Inter } from "next/font/google";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { getSiteUrl, STOREFRONT_SEO } from "@/lib/storefront/site";
 import "./globals.css";
@@ -21,6 +21,13 @@ const cormorant = Cormorant_Garamond({
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+  display: "swap",
+});
+
+const greatVibes = Great_Vibes({
+  variable: "--font-great-vibes",
+  subsets: ["latin"],
+  weight: "400",
   display: "swap",
 });
 
@@ -56,7 +63,7 @@ export default function RootLayout({
   return (
     <html
       lang="es"
-      className={`${inter.variable} ${cormorant.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${inter.variable} ${cormorant.variable} ${geistMono.variable} ${greatVibes.variable} h-full antialiased`}
       suppressHydrationWarning
     >
       <body className="flex min-h-full flex-col">

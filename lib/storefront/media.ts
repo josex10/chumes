@@ -1,3 +1,8 @@
+export const STOREFRONT_HERO = {
+  src: "/storefront/hero-outdoor.jpg",
+  alt: "Montaje al aire libre con mesas redondas, sillas Tiffany blancas y mantelería crema frente a montañas.",
+} as const;
+
 export const STOREFRONT_LOGO = {
   src: "/brand/logo-oficial.png",
   fallbackSrc: "/brand/logo-oficial-2026.jpg",

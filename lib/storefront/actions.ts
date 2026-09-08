@@ -329,15 +329,17 @@ export async function submitQuoteRequest(
       sort_order: index,
     }));
 
-    const { error: itemsError } = await supabase
-      .from("quote_items")
-      .insert(quoteItems);
+    if (quoteItems.length > 0) {
+      const { error: itemsError } = await supabase
+        .from("quote_items")
+        .insert(quoteItems);
 
-    if (itemsError) {
-      console.error("[submitQuoteRequest items]", itemsError.message);
-      await supabase.from("quotes").delete().eq("id", quote.id);
-      await supabase.from("events").delete().eq("id", event.id);
-      return { success: false, error: "No se pudo crear la cotización." };
+      if (itemsError) {
+        console.error("[submitQuoteRequest items]", itemsError.message);
+        await supabase.from("quotes").delete().eq("id", quote.id);
+        await supabase.from("events").delete().eq("id", event.id);
+        return { success: false, error: "No se pudo crear la cotización." };
+      }
     }
 
     const linkResult = await linkQuoteToEvent(quote.id, event.id);

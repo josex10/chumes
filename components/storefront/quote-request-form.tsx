@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCart } from "@/components/storefront/cart-provider";
 import { QuoteSummary } from "@/components/storefront/quote-summary";
@@ -23,6 +23,15 @@ export function QuoteRequestForm() {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const inquiryType = searchParams.get("tipo") ?? "";
+  const hasItems = items.length > 0;
+
+  useEffect(() => {
+    const id = window.location.hash.replace("#", "");
+    if (!id) {
+      return;
+    }
+    document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [hasItems]);
 
   function handleSubmit(formData: FormData) {
     setError(null);
@@ -67,36 +76,28 @@ export function QuoteRequestForm() {
     });
   }
 
-  if (items.length === 0) {
-    return (
-      <div className="border border-dashed border-arena px-8 py-16 text-center">
-        <h2 className="font-heading text-3xl">Tu evento todavía está vacío</h2>
-        <p className="mx-auto mt-3 max-w-md text-muted-foreground">
-          Explorá el catálogo y agregá lo que necesitás. Después volvés aquí a
-          pedir la cotización.
-        </p>
-        <Link
-          href="/catalogo"
-          className="mt-8 inline-flex h-12 items-center rounded-full bg-brand px-7 text-sm text-ivory hover:bg-brand-deep"
-        >
-          Ver catálogo
-        </Link>
-      </div>
-    );
-  }
-
   return (
-    <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">
-      <QuoteSummary />
+    <div
+      className={
+        hasItems
+          ? "grid gap-8 lg:grid-cols-[1.1fr_0.9fr]"
+          : "mx-auto max-w-xl"
+      }
+    >
+      {hasItems ? <QuoteSummary /> : null}
 
-      <section className="border border-arena/80 bg-ivory p-6 md:p-8">
+      <section
+        id="formulario"
+        className="scroll-mt-32 border border-arena/80 bg-ivory p-6 md:p-8"
+      >
         <p className="text-[0.7rem] tracking-[0.22em] text-brand-gold uppercase">
           Datos
         </p>
         <h2 className="font-heading mt-2 text-3xl">Contanos sobre tu evento</h2>
         <p className="mt-2 text-sm text-muted-foreground">
-          Con la fecha y cuántas personas van, te ayudamos a calcular lo que
-          necesitás.
+          {hasItems
+            ? "Con la fecha y cuántas personas van, te ayudamos a calcular lo que necesitás."
+            : "Dejanos fecha, lugar y cuántas personas van. Si querés, después armás el equipo en el catálogo."}
         </p>
         <form action={handleSubmit} className="mt-6 space-y-4">
           <div className="space-y-2">
@@ -160,11 +161,20 @@ export function QuoteRequestForm() {
           <button
             type="submit"
             disabled={isPending}
-            className="inline-flex h-12 w-full items-center justify-center rounded-full bg-brand text-sm text-ivory hover:bg-brand-deep disabled:opacity-60"
+            className="inline-flex h-12 w-full items-center justify-center rounded-full bg-brand text-sm font-semibold tracking-wide text-ivory hover:bg-brand-deep disabled:opacity-60"
           >
             {isPending ? "Enviando..." : "Solicitar cotización"}
           </button>
         </form>
+        {hasItems ? null : (
+          <p className="mt-6 text-center text-sm text-muted-foreground">
+            ¿Ya sabés qué equipo necesitás?{" "}
+            <Link href="/catalogo" className="text-brand">
+              Armá tu evento en el catálogo
+            </Link>
+            .
+          </p>
+        )}
       </section>
     </div>
   );

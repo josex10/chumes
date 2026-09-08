@@ -67,7 +67,7 @@ export function AddToEventButton({
   if (added) {
     return (
       <Link
-        href="/cotizar"
+        href="/cotizar#evento"
         className={cn(
           "inline-flex h-11 items-center justify-center rounded-full bg-brand px-5 text-sm text-ivory",
           className,
