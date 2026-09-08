@@ -13,7 +13,7 @@ export function CartButton({ className }: { className?: string }) {
       href="/cotizar"
       className={cn(
         buttonVariants({ variant: "outline", size: "sm" }),
-        "rounded-full border-arena px-4",
+        "rounded-full border-arena px-4 text-sm font-semibold tracking-wide",
         className,
       )}
     >

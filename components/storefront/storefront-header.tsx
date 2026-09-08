@@ -45,10 +45,10 @@ export function StorefrontHeader() {
       <div
         className={cn(
           "mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-5 transition-[padding] duration-300 md:px-6",
-          scrolled ? "py-2.5" : "py-4",
+          scrolled ? "py-1.5" : "py-2.5",
         )}
       >
-        <StorefrontLogo compact={scrolled} />
+        <StorefrontLogo compact={scrolled} showWordmark={false} />
 
         <nav className="absolute left-1/2 hidden -translate-x-1/2 items-center gap-7 lg:flex">
           {STOREFRONT_NAV.map((item) => {
@@ -85,7 +85,7 @@ export function StorefrontHeader() {
           </div>
           <Link
             href="/cotizar"
-            className="hidden rounded-full bg-brand px-5 py-2 text-sm text-ivory transition hover:bg-brand-deep sm:inline-flex"
+            className="hidden rounded-full bg-brand px-5 py-2 text-sm font-semibold tracking-wide text-ivory transition hover:bg-brand-deep sm:inline-flex"
           >
             Cotizar ahora
           </Link>
@@ -132,7 +132,7 @@ export function StorefrontHeader() {
           <div className="mt-4 flex flex-col gap-3">
             <Link
               href="/cotizar"
-              className="inline-flex h-12 items-center justify-center rounded-full bg-brand text-sm text-ivory"
+              className="inline-flex h-12 items-center justify-center rounded-full bg-brand text-sm font-semibold tracking-wide text-ivory"
             >
               Cotizar ahora
             </Link>

@@ -26,10 +26,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   metadataBase: new URL(getSiteUrl()),
-  title: {
-    default: STOREFRONT_SEO.title,
-    template: "%s | Chumes",
-  },
+  title: STOREFRONT_SEO.title,
   description: STOREFRONT_SEO.description,
   applicationName: "Chumes",
   keywords: [

@@ -15,7 +15,7 @@ export function StorefrontLogo({
   showWordmark = true,
   className,
 }: StorefrontLogoProps) {
-  const size = compact ? 44 : 56;
+  const size = showWordmark ? (compact ? 44 : 56) : compact ? 72 : 96;
 
   return (
     <Link
@@ -30,8 +30,14 @@ export function StorefrontLogo({
         height={size}
         priority
         className={cn(
-          "h-auto w-auto object-contain transition-[width,height] duration-300",
-          compact ? "size-11" : "size-14",
+          "w-auto object-contain transition-[height] duration-300",
+          showWordmark
+            ? compact
+              ? "h-11"
+              : "h-14"
+            : compact
+              ? "h-[4.5rem]"
+              : "h-24",
         )}
       />
       {showWordmark ? (
