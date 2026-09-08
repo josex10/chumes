@@ -7,6 +7,7 @@ import {
   formatPhoneNumber,
 } from "@/lib/customers/phone";
 import { EVENT_PRIORITY } from "@/lib/events/constants";
+import { buildEventTitle } from "@/lib/events/event-title";
 import { getInitialFollowUpAt } from "@/lib/follow-ups/schedule";
 import { getInquiryStatusId } from "@/lib/events/queries";
 import { linkQuoteToEvent } from "@/lib/events/actions";
@@ -244,7 +245,10 @@ export async function submitQuoteRequest(
     ]);
 
     const now = new Date().toISOString();
-    const eventTitle = `Solicitud web — ${parsed.data.name.trim()}`;
+    const eventTitle = buildEventTitle(
+      parsed.data.name.trim(),
+      parsed.data.event_date,
+    );
     const eventNotes = [
       "Solicitud recibida desde el sitio web.",
       parsed.data.inquiry_type === "corporativo"

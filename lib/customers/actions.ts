@@ -6,6 +6,8 @@ import {
   ANONYMOUS_NAME_MAX_ATTEMPTS,
   buildAnonymousCustomerName,
 } from "@/lib/customers/anonymous-name";
+import { EVENT_PHASE } from "@/lib/events/constants";
+import { buildEventTitle } from "@/lib/events/event-title";
 import {
   customerNameExists,
   getCustomerById,
@@ -39,6 +41,38 @@ function parseFormValues(values: CustomerFormValues): ParseResult {
   }
 
   return { ok: true, data: toCustomerPayload(parsed.data) };
+}
+
+async function syncOpenEventTitlesForCustomer(
+  customerId: string,
+  customerName: string,
+) {
+  const supabase = createAdminSupabaseClient();
+  const { data, error } = await supabase
+    .from("events")
+    .select("id, event_date, event_statuses(phase)")
+    .eq("customer_id", customerId);
+
+  if (error) {
+    console.error("[syncOpenEventTitlesForCustomer]", error.message);
+    return;
+  }
+
+  const openEvents = (data ?? []).filter((event) => {
+    const status = Array.isArray(event.event_statuses)
+      ? event.event_statuses[0]
+      : event.event_statuses;
+    return status?.phase !== EVENT_PHASE.TERMINAL;
+  });
+
+  await Promise.all(
+    openEvents.map((event) =>
+      supabase
+        .from("events")
+        .update({ title: buildEventTitle(customerName, event.event_date) })
+        .eq("id", event.id),
+    ),
+  );
 }
 
 export async function createCustomer(
@@ -76,6 +110,7 @@ export async function updateCustomer(
     return { success: false, error: parsed.error };
   }
 
+  const current = await getCustomerById(id);
   const supabase = createAdminSupabaseClient();
   const { error } = await supabase
     .from("customers")
@@ -85,6 +120,10 @@ export async function updateCustomer(
   if (error) {
     console.error("[updateCustomer]", error.message);
     return { success: false, error: "Could not update customer." };
+  }
+
+  if (current && current.name !== parsed.data.name) {
+    await syncOpenEventTitlesForCustomer(id, parsed.data.name);
   }
 
   revalidatePath("/customers");

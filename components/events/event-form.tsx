@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { createEvent, updateEvent } from "@/lib/events/actions";
 import { EVENT_PRIORITY } from "@/lib/events/constants";
+import { buildEventTitle } from "@/lib/events/event-title";
 import { toDatetimeLocalValue } from "@/lib/events/format-dates";
 import {
   eventFormSchema,
@@ -49,12 +50,15 @@ export function EventForm({ customerTypes, sources, event }: EventFormProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [customerName, setCustomerName] = useState(event?.customers.name ?? "");
   const isEditing = Boolean(event);
 
   const form = useForm<EventFormValues>({
     resolver: zodResolver(eventFormSchema),
     defaultValues: {
-      title: event?.title ?? "",
+      title: event
+        ? buildEventTitle(event.customers.name, event.event_date)
+        : "",
       customer_id: event?.customer_id ?? "",
       contact_id: event?.contact_id ?? null,
       source_id: event?.source_id ?? undefined,
@@ -77,6 +81,18 @@ export function EventForm({ customerTypes, sources, event }: EventFormProps) {
   } = form;
 
   const customerId = watch("customer_id");
+  const eventDate = watch("event_date");
+
+  useEffect(() => {
+    if (!customerName) {
+      setValue("title", "", { shouldValidate: false });
+      return;
+    }
+
+    setValue("title", buildEventTitle(customerName, eventDate), {
+      shouldValidate: true,
+    });
+  }, [customerName, eventDate, setValue]);
 
   function onSubmit(values: EventFormValues) {
     setSubmitError(null);
@@ -108,16 +124,6 @@ export function EventForm({ customerTypes, sources, event }: EventFormProps) {
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-          <div className="space-y-2">
-            <Label htmlFor="title">
-              Título <span className="text-destructive">*</span>
-            </Label>
-            <Input id="title" placeholder="Ej. Boda María" {...register("title")} />
-            {errors.title && (
-              <p className="text-sm text-destructive">{errors.title.message}</p>
-            )}
-          </div>
-
           <Controller
             control={control}
             name="customer_id"
@@ -127,6 +133,14 @@ export function EventForm({ customerTypes, sources, event }: EventFormProps) {
                 value={field.value}
                 defaultCustomer={event?.customers}
                 onChange={field.onChange}
+                onCustomerSelected={(customer) => {
+                  setCustomerName(customer.name);
+                  setValue(
+                    "title",
+                    buildEventTitle(customer.name, eventDate),
+                    { shouldValidate: true },
+                  );
+                }}
               />
             )}
           />
@@ -202,6 +216,18 @@ export function EventForm({ customerTypes, sources, event }: EventFormProps) {
                 />
               </div>
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="title">Título</Label>
+            <Input
+              id="title"
+              readOnly
+              tabIndex={-1}
+              placeholder="Se genera con el cliente y la fecha"
+              className="bg-muted/50"
+              {...register("title")}
+            />
           </div>
 
           <div className="space-y-2">

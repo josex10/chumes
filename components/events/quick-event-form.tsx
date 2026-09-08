@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { createQuickEvent } from "@/lib/events/actions";
-import { buildQuickEventTitle } from "@/lib/events/quick-title";
+import { buildEventTitle } from "@/lib/events/event-title";
 import {
   quickEventFormSchema,
   type QuickEventFormValues,
@@ -23,6 +23,7 @@ const EMPTY_VALUES: QuickEventFormValues = {
   title: "",
   customer_id: "",
   source_id: undefined as unknown as number,
+  event_date: "",
 };
 
 type QuickEventFormProps = {
@@ -41,6 +42,7 @@ export function QuickEventForm({
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [createdEventId, setCreatedEventId] = useState<string | null>(null);
   const [pickerKey, setPickerKey] = useState(0);
+  const [customerName, setCustomerName] = useState("");
 
   const form = useForm<QuickEventFormValues>({
     resolver: zodResolver(quickEventFormSchema),
@@ -58,6 +60,7 @@ export function QuickEventForm({
   } = form;
 
   const customerId = watch("customer_id");
+  const eventDate = watch("event_date");
 
   useEffect(() => {
     if (open) {
@@ -65,13 +68,27 @@ export function QuickEventForm({
     }
 
     reset(EMPTY_VALUES);
+    setCustomerName("");
     setSubmitError(null);
     setCreatedEventId(null);
     setPickerKey((key) => key + 1);
   }, [open, reset]);
 
+  useEffect(() => {
+    if (!customerName) {
+      setValue("title", "", { shouldValidate: false });
+      return;
+    }
+
+    setValue("title", buildEventTitle(customerName, eventDate), {
+      shouldValidate: true,
+      shouldDirty: true,
+    });
+  }, [customerName, eventDate, setValue]);
+
   function handleCustomerSelected(customer: { id: string; name: string }) {
-    setValue("title", buildQuickEventTitle(customer.name), {
+    setCustomerName(customer.name);
+    setValue("title", buildEventTitle(customer.name, eventDate), {
       shouldValidate: true,
       shouldDirty: true,
     });
@@ -91,6 +108,7 @@ export function QuickEventForm({
 
       setCreatedEventId(result.eventId);
       reset(EMPTY_VALUES);
+      setCustomerName("");
       setPickerKey((key) => key + 1);
       router.refresh();
     });
@@ -117,17 +135,23 @@ export function QuickEventForm({
       )}
 
       <div className="space-y-2">
-        <Label htmlFor="quick-event-title">
-          Título <span className="text-destructive">*</span>
-        </Label>
+        <Label htmlFor="quick-event-date">Fecha del evento</Label>
+        <Input id="quick-event-date" type="date" {...register("event_date")} />
+        {errors.event_date && (
+          <p className="text-sm text-destructive">{errors.event_date.message}</p>
+        )}
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="quick-event-title">Título</Label>
         <Input
           id="quick-event-title"
-          placeholder="Se genera con el cliente"
+          readOnly
+          tabIndex={-1}
+          placeholder="Se genera con el cliente y la fecha"
+          className="bg-muted/50"
           {...register("title")}
         />
-        {errors.title && (
-          <p className="text-sm text-destructive">{errors.title.message}</p>
-        )}
       </div>
 
       <div className="space-y-2">

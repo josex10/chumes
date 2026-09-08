@@ -3,8 +3,10 @@
 import { auth } from "@clerk/nextjs/server";
 import { revalidatePath } from "next/cache";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
+import { getCustomerById } from "@/lib/customers/queries";
 import { EVENT_PHASE, EVENT_PRIORITY, EVENT_STATUS } from "@/lib/events/constants";
 import { hasCompleteDates } from "@/lib/events/dates-status";
+import { buildEventTitle } from "@/lib/events/event-title";
 import { fromDatetimeLocalValue } from "@/lib/events/format-dates";
 import { getEventSourceById } from "@/lib/event-sources/queries";
 import {
@@ -49,6 +51,18 @@ async function validateEventSourceId(
   return null;
 }
 
+async function resolveEventTitle(
+  customerId: string,
+  eventDate: string | null | undefined,
+): Promise<{ title: string } | { error: string }> {
+  const customer = await getCustomerById(customerId);
+  if (!customer) {
+    return { error: "Cliente no encontrado." };
+  }
+
+  return { title: buildEventTitle(customer.name, eventDate) };
+}
+
 async function getStatusIdByCode(code: string): Promise<number> {
   const supabase = createAdminSupabaseClient();
   const { data, error } = await supabase
@@ -84,10 +98,20 @@ export async function createEvent(values: EventFormValues): Promise<ActionResult
       return { success: false, error: sourceError };
     }
 
+    const payload = toEventPayload(parsed.data);
+    const titleResult = await resolveEventTitle(
+      payload.customer_id,
+      payload.event_date,
+    );
+    if ("error" in titleResult) {
+      return { success: false, error: titleResult.error };
+    }
+
     const { data, error } = await supabase
       .from("events")
       .insert({
-        ...toEventPayload(parsed.data),
+        ...payload,
+        title: titleResult.title,
         status_id: inquiryStatusId,
         first_contact_at: now,
         last_contact_at: now,
@@ -132,7 +156,7 @@ export async function createQuickEvent(
     customer_id: parsed.data.customer_id,
     source_id: parsed.data.source_id,
     contact_id: null,
-    event_date: "",
+    event_date: parsed.data.event_date ?? "",
     delivery_date: "",
     pickup_date: "",
     estimated_location: "",
@@ -178,10 +202,20 @@ export async function updateEvent(
       return { success: false, error: sourceError };
     }
 
+    const payload = toEventPayload(parsed.data);
+    const titleResult = await resolveEventTitle(
+      payload.customer_id,
+      payload.event_date,
+    );
+    if ("error" in titleResult) {
+      return { success: false, error: titleResult.error };
+    }
+
     const { error } = await supabase
       .from("events")
       .update({
-        ...toEventPayload(parsed.data),
+        ...payload,
+        title: titleResult.title,
         updated_by: userId,
       })
       .eq("id", id);
@@ -227,11 +261,15 @@ export async function updateEventSchedule(
       };
     }
 
+    const eventDate = values.event_date?.trim() || null;
+    const title = buildEventTitle(event.customers?.name ?? "", eventDate);
+
     const supabase = createAdminSupabaseClient();
     const { error } = await supabase
       .from("events")
       .update({
-        event_date: values.event_date?.trim() || null,
+        title,
+        event_date: eventDate,
         delivery_date: fromDatetimeLocalValue(values.delivery_date),
         pickup_date: fromDatetimeLocalValue(values.pickup_date),
         updated_by: userId,

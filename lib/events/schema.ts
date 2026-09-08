@@ -3,7 +3,7 @@ import { EVENT_PRIORITY } from "@/lib/events/constants";
 import { fromDatetimeLocalValue } from "@/lib/events/format-dates";
 
 export const eventFormSchema = z.object({
-  title: z.string().trim().min(1, "El título es requerido"),
+  title: z.string().trim().optional(),
   customer_id: z.string().uuid("Seleccione un cliente"),
   contact_id: z.string().uuid().optional().nullable(),
   source_id: z.coerce
@@ -28,13 +28,14 @@ export const quickEventFormSchema = eventFormSchema.pick({
   title: true,
   customer_id: true,
   source_id: true,
+  event_date: true,
 });
 
 export type QuickEventFormValues = z.infer<typeof quickEventFormSchema>;
 
 export function toEventPayload(values: EventFormValues) {
   return {
-    title: values.title.trim(),
+    title: values.title?.trim() || "",
     customer_id: values.customer_id,
     contact_id: values.contact_id ?? null,
     source_id: values.source_id,
