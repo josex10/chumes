@@ -27,6 +27,7 @@ export const PRODUCT_PRICE_TYPE = {
 
 export const PRODUCT_COMBOBOX_PAGE_SIZE = 10;
 export const PRODUCT_LIST_PAGE_SIZE = 10;
+export const PRODUCT_RESERVATIONS_PAGE_SIZE = 10;
 export const PRODUCT_SEARCH_DEBOUNCE_MS = 300;
 
 export const CATEGORY_COMBOBOX_PAGE_SIZE = 10;
@@ -37,6 +38,7 @@ export const PRODUCT_EDIT_TAB = {
   CATALOG: "catalog",
   INVENTORY: "inventory",
   AVAILABILITY: "availability",
+  RESERVATIONS: "reservas",
 } as const;
 
 export type ProductEditTab =
@@ -46,10 +48,12 @@ export const SIMPLE_PRODUCT_TABS = [
   { id: PRODUCT_EDIT_TAB.GENERAL, label: "Producto" },
   { id: PRODUCT_EDIT_TAB.CATALOG, label: "Catálogo web" },
   { id: PRODUCT_EDIT_TAB.INVENTORY, label: "Inventario" },
+  { id: PRODUCT_EDIT_TAB.RESERVATIONS, label: "Reservas" },
 ] as const;
 
 export const BUNDLE_PRODUCT_TABS = [
   { id: PRODUCT_EDIT_TAB.GENERAL, label: "Producto" },
   { id: PRODUCT_EDIT_TAB.CATALOG, label: "Catálogo web" },
   { id: PRODUCT_EDIT_TAB.AVAILABILITY, label: "Disponibilidad" },
+  { id: PRODUCT_EDIT_TAB.RESERVATIONS, label: "Reservas" },
 ] as const;

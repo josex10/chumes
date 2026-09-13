@@ -1257,6 +1257,24 @@ export type Database = {
         Args: Record<string, never>;
         Returns: string;
       };
+      list_product_event_reservations: {
+        Args: {
+          p_product_id: string;
+          p_phase: string;
+          p_limit?: number;
+          p_offset?: number;
+        };
+        Returns: {
+          event_id: string;
+          event_title: string;
+          event_date: string | null;
+          customer_name: string;
+          status_name: string;
+          status_code: string;
+          quantity: number;
+          total_count: number;
+        }[];
+      };
     };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;
