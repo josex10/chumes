@@ -43,7 +43,7 @@ type CartContextValue = {
   clearCart: () => void;
 };
 
-const STORAGE_KEY = "chumes-storefront-cart";
+const STORAGE_KEY = "chumes-storefront-cart-v2";
 
 const CartContext = createContext<CartContextValue | null>(null);
 

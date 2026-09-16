@@ -9,6 +9,7 @@ import type {
   UseFormSetValue,
   UseFormWatch,
 } from "react-hook-form";
+import { GrossPriceField, parseOptionalNumber } from "@/components/products/gross-price-field";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
@@ -99,20 +100,23 @@ export function PricingFields<T extends FieldValues>({
 }: PricingFieldsProps<T>) {
   const rentalAvailable = watch("rental_available" as Path<T>);
   const saleAvailable = watch("sale_available" as Path<T>);
+  const rentalPrice = watch("rental_price" as Path<T>) as number | undefined;
+  const salePrice = watch("sale_price" as Path<T>) as number | undefined;
 
   return (
     <div className="space-y-5">
       <div>
         <h3 className="text-sm font-medium">Precios</h3>
         <p className="mt-1 text-sm text-muted-foreground">
-          Defina cómo se ofrece este producto. Puede activar alquiler, venta o ambos.
+          Escriba el monto final con IVA. El sistema calcula la base de alquiler o
+          venta para cotizaciones y facturas sin impuesto.
         </p>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
         <PriceOptionCard
           title="Alquiler"
-          description="Precio por unidad de alquiler para eventos y cotizaciones."
+          description="Precio final por unidad de alquiler, con IVA incluido."
           icon={Timer}
           enabled={Boolean(rentalAvailable)}
           onToggle={() =>
@@ -122,32 +126,22 @@ export function PricingFields<T extends FieldValues>({
             )
           }
         >
-          <div className="space-y-2">
-            <Label htmlFor="rental_price">Precio de alquiler (CRC)</Label>
-            <Input
-              id="rental_price"
-              type="number"
-              min="0"
-              step="0.01"
-              placeholder="0"
-              {...register("rental_price" as Path<T>, {
-                setValueAs: (value) =>
-                  value === "" || Number.isNaN(Number(value))
-                    ? undefined
-                    : Number(value),
-              })}
-            />
-            {typeof errors.rental_price?.message === "string" ? (
-              <p className="text-sm text-destructive">
-                {errors.rental_price.message}
-              </p>
-            ) : null}
-          </div>
+          <GrossPriceField
+            id="rental_price"
+            name={"rental_price" as Path<T>}
+            register={register}
+            value={rentalPrice}
+            error={
+              typeof errors.rental_price?.message === "string"
+                ? errors.rental_price.message
+                : undefined
+            }
+          />
         </PriceOptionCard>
 
         <PriceOptionCard
           title="Venta"
-          description="Precio cuando el cliente compra el artículo directamente."
+          description="Precio final cuando el cliente compra el artículo, con IVA incluido."
           icon={ShoppingBag}
           enabled={Boolean(saleAvailable)}
           onToggle={() =>
@@ -157,25 +151,17 @@ export function PricingFields<T extends FieldValues>({
             )
           }
         >
-          <div className="space-y-2">
-            <Label htmlFor="sale_price">Precio de venta (CRC)</Label>
-            <Input
-              id="sale_price"
-              type="number"
-              min="0"
-              step="0.01"
-              placeholder="0"
-              {...register("sale_price" as Path<T>, {
-                setValueAs: (value) =>
-                  value === "" || Number.isNaN(Number(value))
-                    ? undefined
-                    : Number(value),
-              })}
-            />
-            {typeof errors.sale_price?.message === "string" ? (
-              <p className="text-sm text-destructive">{errors.sale_price.message}</p>
-            ) : null}
-          </div>
+          <GrossPriceField
+            id="sale_price"
+            name={"sale_price" as Path<T>}
+            register={register}
+            value={salePrice}
+            error={
+              typeof errors.sale_price?.message === "string"
+                ? errors.sale_price.message
+                : undefined
+            }
+          />
         </PriceOptionCard>
 
         {showReplacementCost ? (
@@ -192,10 +178,7 @@ export function PricingFields<T extends FieldValues>({
               step="0.01"
               placeholder="0"
               {...register("replacement_cost" as Path<T>, {
-                setValueAs: (value) =>
-                  value === "" || Number.isNaN(Number(value))
-                    ? undefined
-                    : Number(value),
+                setValueAs: parseOptionalNumber,
               })}
             />
           </InternalCostCard>

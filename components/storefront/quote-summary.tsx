@@ -68,12 +68,12 @@ export function QuoteSummary() {
       </div>
 
       <div className="mt-6 flex items-center justify-between text-sm">
-        <span className="text-muted-foreground">Subtotal referencial</span>
+        <span className="text-muted-foreground">Subtotal referencial (IVA incl.)</span>
         <span className="font-medium">{formatCurrency(subtotal)}</span>
       </div>
       <p className="mt-4 text-sm text-muted-foreground">
-        Los precios son referenciales. Confirmamos entrega, disponibilidad e
-        impuestos en la cotización final.
+        Los precios incluyen IVA. Confirmamos entrega y disponibilidad en la
+        cotización final.
       </p>
     </section>
   );

@@ -25,6 +25,7 @@ import {
   type SearchQuotableProductsResult,
   type SearchSimpleProductsResult,
 } from "@/lib/products/queries";
+import { toOptionalNet } from "@/lib/pricing/vat";
 import type { ProductCategory } from "@/lib/supabase/types";
 import {
   bundleFormSchema,
@@ -166,12 +167,12 @@ async function upsertCurrentPrices(
 
   await replacePrice(
     priceTypeIds.rentalPriceTypeId,
-    values.rental_price,
+    toOptionalNet(values.rental_price),
     values.rental_available,
   );
   await replacePrice(
     priceTypeIds.salePriceTypeId,
-    values.sale_price,
+    toOptionalNet(values.sale_price),
     values.sale_available,
   );
 }

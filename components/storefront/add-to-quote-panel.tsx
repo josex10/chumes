@@ -6,6 +6,7 @@ import { useCart } from "@/components/storefront/cart-provider";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { QUOTE_LINE_TYPE } from "@/lib/quotes/constants";
+import { getCatalogLinePrice } from "@/lib/storefront/catalog";
 import type { PublicProduct } from "@/lib/supabase/types";
 import { cn } from "@/lib/utils";
 
@@ -24,10 +25,7 @@ export function AddToQuotePanel({ product }: AddToQuoteProps) {
   const [quantity, setQuantity] = useState(1);
   const [added, setAdded] = useState(false);
 
-  const unitPrice =
-    lineType === QUOTE_LINE_TYPE.RENTAL
-      ? product.rental_price
-      : product.sale_price;
+  const unitPrice = getCatalogLinePrice(product, lineType);
 
   function handleAdd() {
     if (unitPrice == null) {

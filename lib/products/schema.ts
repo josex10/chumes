@@ -26,7 +26,7 @@ export const productFormSchema = z
     if (values.rental_available && values.rental_price === undefined) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: "El precio de alquiler es obligatorio cuando el alquiler está activo",
+        message: "El precio final de alquiler es obligatorio cuando el alquiler está activo",
         path: ["rental_price"],
       });
     }
@@ -34,7 +34,7 @@ export const productFormSchema = z
     if (values.sale_available && values.sale_price === undefined) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: "El precio de venta es obligatorio cuando la venta está activa",
+        message: "El precio final de venta es obligatorio cuando la venta está activa",
         path: ["sale_price"],
       });
     }
@@ -68,7 +68,7 @@ export const bundleFormSchema = z
     if (values.rental_available && values.rental_price === undefined) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: "El precio de alquiler es obligatorio cuando el alquiler está activo",
+        message: "El precio final de alquiler es obligatorio cuando el alquiler está activo",
         path: ["rental_price"],
       });
     }
@@ -76,7 +76,7 @@ export const bundleFormSchema = z
     if (values.sale_available && values.sale_price === undefined) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: "El precio de venta es obligatorio cuando la venta está activa",
+        message: "El precio final de venta es obligatorio cuando la venta está activa",
         path: ["sale_price"],
       });
     }
@@ -124,7 +124,7 @@ const pricingRefinement = (
   if (values.rental_available && values.rental_price === undefined) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
-      message: "El precio de alquiler es obligatorio cuando el alquiler está activo",
+      message: "El precio final de alquiler es obligatorio cuando el alquiler está activo",
       path: ["rental_price"],
     });
   }
@@ -132,7 +132,7 @@ const pricingRefinement = (
   if (values.sale_available && values.sale_price === undefined) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
-      message: "El precio de venta es obligatorio cuando la venta está activa",
+      message: "El precio final de venta es obligatorio cuando la venta está activa",
       path: ["sale_price"],
     });
   }

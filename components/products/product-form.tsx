@@ -6,6 +6,10 @@ import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
 import { CategoryField } from "@/components/products/category-field";
+import {
+  GrossPriceField,
+  parseOptionalNumber,
+} from "@/components/products/gross-price-field";
 import { createProduct, updateProduct } from "@/lib/products/actions";
 import {
   productFormSchema,
@@ -145,49 +149,23 @@ export function ProductForm({
           </div>
 
           {rentalAvailable && (
-            <div className="space-y-2">
-              <Label htmlFor="rental_price">Rental price</Label>
-              <Input
-                id="rental_price"
-                type="number"
-                min="0"
-                step="0.01"
-                {...register("rental_price", {
-                  setValueAs: (value) =>
-                    value === "" || Number.isNaN(Number(value))
-                      ? undefined
-                      : Number(value),
-                })}
-              />
-              {errors.rental_price && (
-                <p className="text-sm text-destructive">
-                  {errors.rental_price.message}
-                </p>
-              )}
-            </div>
+            <GrossPriceField
+              id="rental_price"
+              name="rental_price"
+              register={register}
+              value={watch("rental_price")}
+              error={errors.rental_price?.message}
+            />
           )}
 
           {saleAvailable && (
-            <div className="space-y-2">
-              <Label htmlFor="sale_price">Sale price</Label>
-              <Input
-                id="sale_price"
-                type="number"
-                min="0"
-                step="0.01"
-                {...register("sale_price", {
-                  setValueAs: (value) =>
-                    value === "" || Number.isNaN(Number(value))
-                      ? undefined
-                      : Number(value),
-                })}
-              />
-              {errors.sale_price && (
-                <p className="text-sm text-destructive">
-                  {errors.sale_price.message}
-                </p>
-              )}
-            </div>
+            <GrossPriceField
+              id="sale_price"
+              name="sale_price"
+              register={register}
+              value={watch("sale_price")}
+              error={errors.sale_price?.message}
+            />
           )}
 
           <div className="grid gap-4 sm:grid-cols-2">
@@ -199,10 +177,7 @@ export function ProductForm({
                 min="0"
                 step="0.01"
                 {...register("minimum_stock", {
-                  setValueAs: (value) =>
-                    value === "" || Number.isNaN(Number(value))
-                      ? undefined
-                      : Number(value),
+                  setValueAs: parseOptionalNumber,
                 })}
               />
             </div>
@@ -214,10 +189,7 @@ export function ProductForm({
                 min="0"
                 step="0.01"
                 {...register("replacement_cost", {
-                  setValueAs: (value) =>
-                    value === "" || Number.isNaN(Number(value))
-                      ? undefined
-                      : Number(value),
+                  setValueAs: parseOptionalNumber,
                 })}
               />
             </div>

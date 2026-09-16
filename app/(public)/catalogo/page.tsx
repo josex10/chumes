@@ -15,7 +15,7 @@ import {
 export const metadata: Metadata = {
   title: "Catálogo",
   description:
-    "Explorá nuestras mesas, sillas, mantelería, combos y equipo para eventos.",
+    "Explorá nuestras mesas, sillas, mantelería, combos y equipo para eventos. Precios con IVA incluido.",
 };
 
 type CatalogPageProps = {
@@ -38,7 +38,7 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
           as="h1"
           eyebrow="Catálogo"
           title="Encontrá todo lo que necesitás para tu evento."
-          description="Explorá nuestras mesas, sillas, mantelería, combos y equipo."
+          description="Explorá nuestras mesas, sillas, mantelería, combos y equipo. Los precios incluyen IVA."
         />
         <div className="mt-10">
           <CatalogFilters categories={categories} filters={filters} />

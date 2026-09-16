@@ -4,6 +4,7 @@ import { useState, type MouseEvent } from "react";
 import Link from "next/link";
 import { useCart } from "@/components/storefront/cart-provider";
 import { QUOTE_LINE_TYPE } from "@/lib/quotes/constants";
+import { getCatalogLinePrice } from "@/lib/storefront/catalog";
 import type { PublicProduct } from "@/lib/supabase/types";
 import { cn } from "@/lib/utils";
 
@@ -26,10 +27,7 @@ export function AddToEventButton({
   const lineType = product.rental_available
     ? QUOTE_LINE_TYPE.RENTAL
     : QUOTE_LINE_TYPE.SALE;
-  const unitPrice =
-    lineType === QUOTE_LINE_TYPE.RENTAL
-      ? product.rental_price
-      : product.sale_price;
+  const unitPrice = getCatalogLinePrice(product, lineType);
 
   if (unitPrice == null) {
     return (

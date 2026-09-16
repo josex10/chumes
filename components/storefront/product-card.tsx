@@ -3,7 +3,7 @@ import { AddToEventButton } from "@/components/storefront/add-to-event-button";
 import { StorefrontImage } from "@/components/storefront/storefront-image";
 import { formatCurrency } from "@/lib/quotes/format";
 import { QUOTE_LINE_TYPE } from "@/lib/quotes/constants";
-import { getCatalogUnitPrice } from "@/lib/storefront/catalog";
+import { getCatalogLinePrice, getCatalogUnitPrice } from "@/lib/storefront/catalog";
 import type { StorefrontPlaceholderKey } from "@/lib/storefront/media";
 import type { PublicProduct } from "@/lib/supabase/types";
 import { cn } from "@/lib/utils";
@@ -47,7 +47,10 @@ export function ProductCard({ product, className }: ProductCardProps) {
           </p>
         ) : null}
         {unitPrice != null ? (
-          <p className="mt-3 text-sm">Desde {formatCurrency(unitPrice)}</p>
+          <p className="mt-3 text-sm">
+            Desde {formatCurrency(unitPrice)}{" "}
+            <span className="text-muted-foreground">IVA incl.</span>
+          </p>
         ) : null}
       </Link>
       <div className="mt-4">
@@ -63,7 +66,7 @@ export function ProductPriceBadges({ product }: { product: PublicProduct }) {
   if (product.rental_available && product.rental_price != null) {
     badges.push({
       label: "Alquiler",
-      value: formatCurrency(product.rental_price),
+      value: formatCurrency(getCatalogLinePrice(product, QUOTE_LINE_TYPE.RENTAL) ?? 0),
       lineType: QUOTE_LINE_TYPE.RENTAL,
     });
   }
@@ -71,7 +74,7 @@ export function ProductPriceBadges({ product }: { product: PublicProduct }) {
   if (product.sale_available && product.sale_price != null) {
     badges.push({
       label: "Venta",
-      value: formatCurrency(product.sale_price),
+      value: formatCurrency(getCatalogLinePrice(product, QUOTE_LINE_TYPE.SALE) ?? 0),
       lineType: QUOTE_LINE_TYPE.SALE,
     });
   }
@@ -88,6 +91,7 @@ export function ProductPriceBadges({ product }: { product: PublicProduct }) {
             {badge.label}
           </p>
           <p className="font-heading mt-1 text-2xl">{badge.value}</p>
+          <p className="mt-1 text-xs text-muted-foreground">IVA incluido</p>
         </div>
       ))}
     </div>

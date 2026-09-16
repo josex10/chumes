@@ -17,6 +17,7 @@ import {
   type CalculatedLine,
 } from "@/lib/quotes/calculations";
 import { formatCurrency } from "@/lib/quotes/format";
+import { grossFromNetOrNull } from "@/lib/pricing/vat";
 import type { QuoteFormValues, QuoteLineItemValues } from "@/lib/quotes/schema";
 import type {
   ProductCategory,
@@ -89,6 +90,24 @@ function getDefaultPrice(
   if (lineTypeCode === QUOTE_LINE_TYPE.RENTAL) return product.rental_price ?? 0;
   if (lineTypeCode === QUOTE_LINE_TYPE.SALE) return product.sale_price ?? 0;
   return 0;
+}
+
+function CatalogGrossHint({
+  product,
+  lineTypeCode,
+}: {
+  product: QuotableProduct | undefined;
+  lineTypeCode: string | undefined;
+}) {
+  const net = getDefaultPrice(product, lineTypeCode);
+  const gross = grossFromNetOrNull(net || null);
+  if (gross == null || gross <= 0) return null;
+
+  return (
+    <p className="mt-1 text-[11px] leading-tight text-muted-foreground">
+      Catálogo: {formatCurrency(gross)} IVA incl.
+    </p>
+  );
 }
 
 function getLineTotal(
@@ -369,6 +388,15 @@ export function QuoteLineItems({
                         valueAsNumber: true,
                       })}
                     />
+                    <CatalogGrossHint
+                      product={products.find(
+                        (product) => product.id === items[index]?.product_id,
+                      )}
+                      lineTypeCode={getLineTypeCode(
+                        lineTypes,
+                        items[index]?.line_type_id,
+                      )}
+                    />
                   </TableCell>
                   <TableCell className={cellClass}>
                     <Select
@@ -568,14 +596,25 @@ export function QuoteLineItems({
                   register={register}
                   className="tabular-nums"
                 />
-                <Input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  disabled={disabled}
-                  className={cn(fieldClass, "tabular-nums")}
-                  {...register(`items.${index}.unit_price`, { valueAsNumber: true })}
-                />
+                <div>
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    disabled={disabled}
+                    className={cn(fieldClass, "tabular-nums")}
+                    {...register(`items.${index}.unit_price`, { valueAsNumber: true })}
+                  />
+                  <CatalogGrossHint
+                    product={products.find(
+                      (product) => product.id === items[index]?.product_id,
+                    )}
+                    lineTypeCode={getLineTypeCode(
+                      lineTypes,
+                      items[index]?.line_type_id,
+                    )}
+                  />
+                </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <Select

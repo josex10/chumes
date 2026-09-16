@@ -17,6 +17,7 @@ import {
 } from "@/lib/products/actions";
 import { PRODUCT_TYPE } from "@/lib/products/constants";
 import type { ProductListItem } from "@/lib/products/queries";
+import { grossFromNetOrNull } from "@/lib/pricing/vat";
 import { formatCurrency } from "@/lib/quotes/format";
 import {
   Table,
@@ -147,14 +148,14 @@ export function ProductsTable({ products }: ProductsTableProps) {
                 <TableCell>
                   <PriceCell
                     enabled={product.rental_available}
-                    price={product.rental_price}
+                    price={grossFromNetOrNull(product.rental_price)}
                     icon={Timer}
                   />
                 </TableCell>
                 <TableCell>
                   <PriceCell
                     enabled={product.sale_available}
-                    price={product.sale_price}
+                    price={grossFromNetOrNull(product.sale_price)}
                     icon={ShoppingBag}
                   />
                 </TableCell>

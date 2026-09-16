@@ -265,7 +265,7 @@ export function OptionPanel({
               </li>
             ))}
             <li className="flex justify-between pt-1 font-medium">
-              <span>Estimado alquiler</span>
+              <span>Estimado alquiler (IVA incl.)</span>
               <span>{formatCurrency(total)}</span>
             </li>
           </ul>

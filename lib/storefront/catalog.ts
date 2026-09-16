@@ -1,5 +1,7 @@
 import { PRODUCT_CATEGORY, PRODUCT_TYPE } from "@/lib/products/constants";
 import { slugify } from "@/lib/products/slug";
+import { grossFromNet, grossFromNetOrNull } from "@/lib/pricing/vat";
+import { QUOTE_LINE_TYPE } from "@/lib/quotes/constants";
 import type { ProductCategory, PublicProduct } from "@/lib/supabase/types";
 
 export const CATEGORY_SLUG_BY_CODE: Record<string, string> = {
@@ -124,12 +126,23 @@ export function catalogHref(filters: {
 
 export function getCatalogUnitPrice(product: PublicProduct): number | null {
   if (product.rental_available && product.rental_price != null) {
-    return product.rental_price;
+    return grossFromNet(product.rental_price);
   }
   if (product.sale_available && product.sale_price != null) {
-    return product.sale_price;
+    return grossFromNet(product.sale_price);
   }
-  return product.rental_price ?? product.sale_price;
+  return grossFromNetOrNull(product.rental_price ?? product.sale_price);
+}
+
+export function getCatalogLinePrice(
+  product: Pick<PublicProduct, "rental_price" | "sale_price">,
+  lineType: typeof QUOTE_LINE_TYPE.RENTAL | typeof QUOTE_LINE_TYPE.SALE,
+): number | null {
+  const net =
+    lineType === QUOTE_LINE_TYPE.RENTAL
+      ? product.rental_price
+      : product.sale_price;
+  return grossFromNetOrNull(net);
 }
 
 export function filterCatalogProducts(

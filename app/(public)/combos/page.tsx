@@ -23,7 +23,7 @@ export default async function CombosPage() {
           as="h1"
           eyebrow="Combos"
           title="Elegí un combo y simplificá tu evento."
-          description="Sillas, mesa y mantel listos para cotizar. Los precios salen del catálogo actual."
+          description="Sillas, mesa y mantel listos para cotizar. Los precios incluyen IVA."
         />
       </section>
 

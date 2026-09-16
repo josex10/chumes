@@ -28,6 +28,7 @@ import {
   getProductPrices,
   getProductStock,
 } from "@/lib/products/queries";
+import { toOptionalGross } from "@/lib/pricing/vat";
 
 export const dynamic = "force-dynamic";
 
@@ -99,8 +100,12 @@ export default async function EditProductPage({
     category_id: product.category_id,
     rental_available: product.rental_available,
     sale_available: product.sale_available,
-    rental_price: rentalPrice ? Number(rentalPrice.amount) : undefined,
-    sale_price: salePrice ? Number(salePrice.amount) : undefined,
+    rental_price: toOptionalGross(
+      rentalPrice ? Number(rentalPrice.amount) : undefined,
+    ),
+    sale_price: toOptionalGross(
+      salePrice ? Number(salePrice.amount) : undefined,
+    ),
     replacement_cost: undefined as number | undefined,
   };
 

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { SectionHeading } from "@/components/storefront/section-heading";
 import { StorefrontImage } from "@/components/storefront/storefront-image";
 import { formatCurrency } from "@/lib/quotes/format";
+import { getCatalogUnitPrice } from "@/lib/storefront/catalog";
 import type { PublicProduct } from "@/lib/supabase/types";
 
 type HomeCombosProps = {
@@ -35,36 +36,39 @@ export function HomeCombos({ combos }: HomeCombosProps) {
           </div>
         ) : (
           <div className="mt-12 grid gap-6 md:grid-cols-3">
-            {combos.map((combo) => (
-              <article key={combo.id} className="group flex flex-col">
-                <StorefrontImage
-                  src={combo.primary_image_url}
-                  placeholder="categoria-combos"
-                  alt={combo.name}
-                  className="aspect-[4/5]"
-                  sizes="(max-width: 768px) 100vw, 33vw"
-                />
-                <div className="flex flex-1 flex-col pt-5">
-                  <h3 className="font-heading text-2xl">{combo.name}</h3>
-                  {combo.description ? (
-                    <p className="mt-2 line-clamp-3 text-sm text-ivory/65">
-                      {combo.description}
-                    </p>
-                  ) : null}
-                  {combo.rental_price != null ? (
-                    <p className="mt-4 text-sm text-brand-gold-soft">
-                      Desde {formatCurrency(combo.rental_price)}
-                    </p>
-                  ) : null}
-                  <Link
-                    href={`/catalogo/${combo.slug}`}
-                    className="mt-6 inline-flex text-sm text-ivory underline-offset-4 hover:underline"
-                  >
-                    Elegir mi combo
-                  </Link>
-                </div>
-              </article>
-            ))}
+            {combos.map((combo) => {
+              const comboPrice = getCatalogUnitPrice(combo);
+              return (
+                <article key={combo.id} className="group flex flex-col">
+                  <StorefrontImage
+                    src={combo.primary_image_url}
+                    placeholder="categoria-combos"
+                    alt={combo.name}
+                    className="aspect-[4/5]"
+                    sizes="(max-width: 768px) 100vw, 33vw"
+                  />
+                  <div className="flex flex-1 flex-col pt-5">
+                    <h3 className="font-heading text-2xl">{combo.name}</h3>
+                    {combo.description ? (
+                      <p className="mt-2 line-clamp-3 text-sm text-ivory/65">
+                        {combo.description}
+                      </p>
+                    ) : null}
+                    {comboPrice != null ? (
+                      <p className="mt-4 text-sm text-brand-gold-soft">
+                        Desde {formatCurrency(comboPrice)} IVA incl.
+                      </p>
+                    ) : null}
+                    <Link
+                      href={`/catalogo/${combo.slug}`}
+                      className="mt-6 inline-flex text-sm text-ivory underline-offset-4 hover:underline"
+                    >
+                      Elegir mi combo
+                    </Link>
+                  </div>
+                </article>
+              );
+            })}
           </div>
         )}
       </div>

@@ -4,6 +4,7 @@ import { useEffect, useTransition } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { CategoryField } from "@/components/products/category-field";
+import { GrossPriceField } from "@/components/products/gross-price-field";
 import { createProductAndFetch } from "@/lib/products/actions";
 import { productFormSchema, type ProductFormValues } from "@/lib/products/schema";
 import type { ProductCategory, QuotableProduct } from "@/lib/supabase/types";
@@ -143,37 +144,23 @@ export function QuickProductModal({
           </div>
 
           {rentalAvailable && (
-            <div className="space-y-2">
-              <Label htmlFor="quick-product-rental-price">Precio alquiler *</Label>
-              <Input
-                id="quick-product-rental-price"
-                type="number"
-                min="0"
-                step="0.01"
-                className="tabular-nums"
-                {...register("rental_price", { valueAsNumber: true })}
-              />
-              {errors.rental_price && (
-                <p className="text-sm text-destructive">{errors.rental_price.message}</p>
-              )}
-            </div>
+            <GrossPriceField
+              id="quick-product-rental-price"
+              name="rental_price"
+              register={register}
+              value={watch("rental_price")}
+              error={errors.rental_price?.message}
+            />
           )}
 
           {saleAvailable && (
-            <div className="space-y-2">
-              <Label htmlFor="quick-product-sale-price">Precio venta *</Label>
-              <Input
-                id="quick-product-sale-price"
-                type="number"
-                min="0"
-                step="0.01"
-                className="tabular-nums"
-                {...register("sale_price", { valueAsNumber: true })}
-              />
-              {errors.sale_price && (
-                <p className="text-sm text-destructive">{errors.sale_price.message}</p>
-              )}
-            </div>
+            <GrossPriceField
+              id="quick-product-sale-price"
+              name="sale_price"
+              register={register}
+              value={watch("sale_price")}
+              error={errors.sale_price?.message}
+            />
           )}
 
           {errors.root && (

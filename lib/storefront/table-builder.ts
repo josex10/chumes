@@ -1,4 +1,6 @@
 import type { PublicProduct } from "@/lib/supabase/types";
+import { getCatalogLinePrice } from "@/lib/storefront/catalog";
+import { QUOTE_LINE_TYPE } from "@/lib/quotes/constants";
 
 export const SETUP_SLOT = {
   TABLE: "table",
@@ -274,8 +276,12 @@ export function buildQuoteLines(
 
   function pushLine(option: LinkedSetupOption | undefined, quantity: number) {
     const product = option?.product;
-    const unitPrice = product?.rental_price;
-    if (!product || unitPrice == null) {
+    if (!product) {
+      return;
+    }
+
+    const unitPrice = getCatalogLinePrice(product, QUOTE_LINE_TYPE.RENTAL);
+    if (unitPrice == null) {
       return;
     }
 

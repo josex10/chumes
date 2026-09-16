@@ -2,6 +2,7 @@ import Link from "next/link";
 import { SectionHeading } from "@/components/storefront/section-heading";
 import { StorefrontImage } from "@/components/storefront/storefront-image";
 import { formatCurrency } from "@/lib/quotes/format";
+import { getCatalogUnitPrice } from "@/lib/storefront/catalog";
 import type { PublicProduct } from "@/lib/supabase/types";
 
 type HomeLinensProps = {
@@ -27,27 +28,30 @@ export function HomeLinens({ products, categoryHref }: HomeLinensProps) {
           </div>
         ) : (
           <div className="mt-12 grid grid-cols-2 gap-4 md:grid-cols-3 md:gap-6">
-            {featured.map((product) => (
-              <Link
-                key={product.id}
-                href={`/catalogo/${product.slug}`}
-                className="group"
-              >
-                <StorefrontImage
-                  src={product.primary_image_url}
-                  placeholder="manteleria-estilo"
-                  alt={product.name}
-                  className="aspect-square"
-                  sizes="(max-width: 768px) 50vw, 33vw"
-                />
-                <p className="mt-3 text-sm">{product.name}</p>
-                {product.rental_price != null ? (
-                  <p className="text-xs text-muted-foreground">
-                    Desde {formatCurrency(product.rental_price)}
-                  </p>
-                ) : null}
-              </Link>
-            ))}
+            {featured.map((product) => {
+              const productPrice = getCatalogUnitPrice(product);
+              return (
+                <Link
+                  key={product.id}
+                  href={`/catalogo/${product.slug}`}
+                  className="group"
+                >
+                  <StorefrontImage
+                    src={product.primary_image_url}
+                    placeholder="manteleria-estilo"
+                    alt={product.name}
+                    className="aspect-square"
+                    sizes="(max-width: 768px) 50vw, 33vw"
+                  />
+                  <p className="mt-3 text-sm">{product.name}</p>
+                  {productPrice != null ? (
+                    <p className="text-xs text-muted-foreground">
+                      Desde {formatCurrency(productPrice)} IVA incl.
+                    </p>
+                  ) : null}
+                </Link>
+              );
+            })}
           </div>
         )}
 
