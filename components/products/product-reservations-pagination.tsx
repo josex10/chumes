@@ -1,29 +1,25 @@
 import Link from "next/link";
-import { PRODUCT_EDIT_TAB } from "@/lib/products/constants";
 import { buttonVariants } from "@/components/ui/button";
+import {
+  buildProductReservationsHref,
+  type ReservationDateOrder,
+} from "@/lib/products/reservation-queries";
 import { cn } from "@/lib/utils";
 
 type ProductReservationsPaginationProps = {
   productId: string;
   page: number;
   totalPages: number;
+  weekKey: string;
+  dateOrder: ReservationDateOrder;
 };
-
-function buildHref(productId: string, page: number) {
-  const params = new URLSearchParams();
-  params.set("tab", PRODUCT_EDIT_TAB.RESERVATIONS);
-
-  if (page > 1) {
-    params.set("page", String(page));
-  }
-
-  return `/products/${productId}/edit?${params.toString()}`;
-}
 
 export function ProductReservationsPagination({
   productId,
   page,
   totalPages,
+  weekKey,
+  dateOrder,
 }: ProductReservationsPaginationProps) {
   if (totalPages <= 1) {
     return null;
@@ -37,7 +33,11 @@ export function ProductReservationsPagination({
       <div className="flex items-center gap-2">
         {page > 1 ? (
           <Link
-            href={buildHref(productId, page - 1)}
+            href={buildProductReservationsHref(productId, {
+              page: page - 1,
+              weekKey,
+              dateOrder,
+            })}
             className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
           >
             Anterior
@@ -54,7 +54,11 @@ export function ProductReservationsPagination({
         )}
         {page < totalPages ? (
           <Link
-            href={buildHref(productId, page + 1)}
+            href={buildProductReservationsHref(productId, {
+              page: page + 1,
+              weekKey,
+              dateOrder,
+            })}
             className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
           >
             Siguiente

@@ -1,10 +1,13 @@
 import Link from "next/link";
-import { CalendarDays, Eye } from "lucide-react";
+import { CalendarDays, Eye, ArrowDown, ArrowUp } from "lucide-react";
 import { ProductReservationsPagination } from "@/components/products/product-reservations-pagination";
+import { ProductReservationsWeekPicker } from "@/components/products/product-reservations-week-picker";
 import {
   Card,
+  CardAction,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -17,7 +20,10 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { formatEventDate } from "@/lib/events/format-dates";
-import type { ProductEventReservationsResult } from "@/lib/products/reservation-queries";
+import {
+  buildProductReservationsHref,
+  type ProductEventReservationsResult,
+} from "@/lib/products/reservation-queries";
 
 type ProductReservationsTabProps = {
   productId: string;
@@ -39,12 +45,20 @@ export function ProductReservationsTab({
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="border-b">
         <CardTitle>En operación</CardTitle>
         <CardDescription>
-          Eventos reservados que tienen este producto comprometido, incluyendo
-          paquetes que lo contienen. No incluye cerrados ganados.
+          Eventos reservados esta semana, incluyendo paquetes que contienen este
+          producto. No incluye cerrados ganados.
         </CardDescription>
+        <CardAction>
+          <ProductReservationsWeekPicker
+            productId={productId}
+            weekKey={operational.weekKey}
+            weekRange={operational.weekRange}
+            dateOrder={operational.dateOrder}
+          />
+        </CardAction>
       </CardHeader>
       <CardContent>
         <div className="flex flex-col gap-4">
@@ -53,7 +67,28 @@ export function ProductReservationsTab({
               <TableHeader>
                 <TableRow>
                   <TableHead>Evento</TableHead>
-                  <TableHead>Fecha del evento</TableHead>
+                  <TableHead>
+                    <Link
+                      href={buildProductReservationsHref(productId, {
+                        weekKey: operational.weekKey,
+                        dateOrder:
+                          operational.dateOrder === "asc" ? "desc" : "asc",
+                      })}
+                      className="inline-flex items-center gap-1.5 hover:text-foreground"
+                      aria-label={
+                        operational.dateOrder === "asc"
+                          ? "Ordenar por fecha del evento, más reciente primero"
+                          : "Ordenar por fecha del evento, más próxima primero"
+                      }
+                    >
+                      Fecha del evento
+                      {operational.dateOrder === "asc" ? (
+                        <ArrowUp className="size-3.5" />
+                      ) : (
+                        <ArrowDown className="size-3.5" />
+                      )}
+                    </Link>
+                  </TableHead>
                   <TableHead>Cliente</TableHead>
                   <TableHead className="text-right">Cantidad</TableHead>
                   <TableHead>Estado</TableHead>
@@ -67,8 +102,7 @@ export function ProductReservationsTab({
                       colSpan={6}
                       className="py-8 text-center text-muted-foreground"
                     >
-                      Este producto no está reservado en ningún evento de
-                      operación.
+                      Este producto no está reservado en esta semana.
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -114,9 +148,19 @@ export function ProductReservationsTab({
             productId={productId}
             page={operational.page}
             totalPages={totalPages}
+            weekKey={operational.weekKey}
+            dateOrder={operational.dateOrder}
           />
         </div>
       </CardContent>
+      <CardFooter className="justify-between gap-4">
+        <p className="text-sm text-muted-foreground">
+          Total de artículos reservados
+        </p>
+        <p className="text-base font-medium tabular-nums">
+          {formatQuantity(operational.totalQuantity)}
+        </p>
+      </CardFooter>
     </Card>
   );
 }

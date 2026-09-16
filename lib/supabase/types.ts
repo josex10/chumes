@@ -1343,6 +1343,9 @@ export type Database = {
           p_phase: string;
           p_limit?: number;
           p_offset?: number;
+          p_start_date?: string;
+          p_end_date?: string;
+          p_ascending?: boolean;
         };
         Returns: {
           event_id: string;
@@ -1353,6 +1356,7 @@ export type Database = {
           status_code: string;
           quantity: number;
           total_count: number;
+          total_quantity: number;
         }[];
       };
     };

@@ -15,7 +15,9 @@ import { getProductImages } from "@/lib/products/image-queries";
 import { PRODUCT_EDIT_TAB, PRODUCT_PRICE_TYPE, PRODUCT_TYPE } from "@/lib/products/constants";
 import {
   getProductEventReservations,
+  parseReservationDateOrder,
   parseReservationPage,
+  parseReservationWeekKey,
 } from "@/lib/products/reservation-queries";
 import {
   getBundleAvailability,
@@ -31,7 +33,12 @@ export const dynamic = "force-dynamic";
 
 type EditProductPageProps = {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ tab?: string; page?: string }>;
+  searchParams: Promise<{
+    tab?: string;
+    page?: string;
+    week?: string;
+    order?: string;
+  }>;
 };
 
 export default async function EditProductPage({
@@ -39,7 +46,12 @@ export default async function EditProductPage({
   searchParams,
 }: EditProductPageProps) {
   const { id } = await params;
-  const { tab: tabParam, page: pageParam } = await searchParams;
+  const {
+    tab: tabParam,
+    page: pageParam,
+    week: weekParam,
+    order: orderParam,
+  } = await searchParams;
   const product = await getProductById(id);
 
   if (!product) {
@@ -53,6 +65,8 @@ export default async function EditProductPage({
     const operational = await getProductEventReservations(
       id,
       parseReservationPage(pageParam),
+      parseReservationWeekKey(weekParam),
+      parseReservationDateOrder(orderParam),
     );
 
     return (
