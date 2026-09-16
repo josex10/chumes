@@ -12,6 +12,7 @@ import {
   Loader2,
   MessageCircle,
   MessageCircleOff,
+  Search,
   TriangleAlert,
 } from "lucide-react";
 import { ArchiveLostDialog } from "@/components/events/archive-lost-dialog";
@@ -34,6 +35,8 @@ import {
   pauseEventFollowUp,
 } from "@/lib/follow-ups/actions";
 import { FOLLOW_UP_BUCKET } from "@/lib/follow-ups/constants";
+import { RESEARCH_STATUS, getResearchStatusLabel } from "@/lib/research/constants";
+import { setResearchRequestStatus } from "@/lib/research/actions";
 import type { FollowUpQueueItem } from "@/lib/follow-ups/types";
 import { LOST_REASON } from "@/lib/events/constants";
 import { formatCurrency } from "@/lib/quotes/format";
@@ -50,6 +53,15 @@ const CADENCE_PILL =
   "inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium text-muted-foreground";
 
 const BUCKET_META = {
+  [FOLLOW_UP_BUCKET.RESEARCH]: {
+    title: "Investigación pendiente",
+    description:
+      "El cliente espera productos o extras que hay que buscar. Prioridad sobre la cadencia de WhatsApp.",
+    icon: Search,
+    accent:
+      "border-violet-500/40 bg-violet-500/10 text-violet-800 dark:text-violet-300",
+    iconClass: "text-violet-600 dark:text-violet-400",
+  },
   [FOLLOW_UP_BUCKET.CLOSE_THIS_WEEK]: {
     title: "Cerrar esta semana",
     description:
@@ -129,16 +141,22 @@ function toMessageContext(
   item: FollowUpQueueItem,
   adHoc: boolean,
 ): FollowUpMessageContext | null {
-  if (!adHoc && !item.step) return null;
+  const isResearch = item.bucket === FOLLOW_UP_BUCKET.RESEARCH;
+  const researchRequest = item.researchRequests?.[0];
+  if (!adHoc && !isResearch && !item.step) return null;
   return {
     eventId: item.event.id,
-    step: adHoc ? null : item.step,
+    step: adHoc || isResearch ? null : item.step,
     customerName: item.event.customers.name,
     eventTitle: item.event.title,
     eventDate: item.event.event_date,
     location: item.event.estimated_location,
     quoteTotal: item.quoteTotal,
     phone: item.phone,
+    researchRequestId: isResearch ? researchRequest?.id : undefined,
+    solicitud: isResearch
+      ? item.researchRequests?.map((request) => request.title).join(", ")
+      : undefined,
   };
 }
 
@@ -155,10 +173,26 @@ export function FollowUpQueueTable({
   const meta = BUCKET_META[bucket];
   const Icon = meta.icon;
   const isCloseThisWeek = bucket === FOLLOW_UP_BUCKET.CLOSE_THIS_WEEK;
+  const isResearch = bucket === FOLLOW_UP_BUCKET.RESEARCH;
   const bucketTotal = sumQuoteTotals(items);
   const sendContext = sendItem
-    ? toMessageContext(sendItem, isCloseThisWeek)
+    ? toMessageContext(sendItem, isCloseThisWeek || isResearch)
     : null;
+
+  function handleCompleteResearch(requestId: string) {
+    setError(null);
+    startTransition(async () => {
+      const result = await setResearchRequestStatus({
+        requestId,
+        status: RESEARCH_STATUS.DONE,
+      });
+      if (!result.success) {
+        setError(result.error);
+        return;
+      }
+      router.refresh();
+    });
+  }
 
   function handlePause(eventId: string) {
     setError(null);
@@ -222,9 +256,11 @@ export function FollowUpQueueTable({
 
       {items.length === 0 ? (
         <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
-          {isCloseThisWeek
-            ? "No hay eventos comerciales con fecha esta semana."
-            : `No hay ${meta.title.toLowerCase()} pendientes para hoy.`}
+          {isResearch
+            ? "No hay investigaciones pendientes."
+            : isCloseThisWeek
+              ? "No hay eventos comerciales con fecha esta semana."
+              : `No hay ${meta.title.toLowerCase()} pendientes para hoy.`}
         </div>
       ) : (
         <div className="rounded-lg border">
@@ -235,7 +271,13 @@ export function FollowUpQueueTable({
                 <TableHead>Evento</TableHead>
                 <TableHead>Teléfono</TableHead>
                 <TableHead>Estado</TableHead>
-                <TableHead>{isCloseThisWeek ? "Fecha" : "Vencimiento"}</TableHead>
+                <TableHead>
+                  {isResearch
+                    ? "Abierta"
+                    : isCloseThisWeek
+                      ? "Fecha"
+                      : "Vencimiento"}
+                </TableHead>
                 <TableHead className="text-right">Monto</TableHead>
                 <TableHead className="text-right">Acciones</TableHead>
               </TableRow>
@@ -263,24 +305,52 @@ export function FollowUpQueueTable({
                       {item.event.customers.name}
                     </TableCell>
                     <TableCell>
-                      <div className="flex flex-wrap items-center gap-1.5">
-                        <Link
-                          href={`/events/${item.event.id}`}
-                          className="hover:underline"
-                        >
-                          {item.event.title}
-                        </Link>
-                        {item.isThisWeek && !isCloseThisWeek ? (
-                          <span className={THIS_WEEK_PILL}>Esta semana</span>
-                        ) : null}
-                        {item.cadenceLabel ? (
-                          <span className={CADENCE_PILL}>{item.cadenceLabel}</span>
-                        ) : null}
-                        {isCloseThisWeek && item.contactedThisWeek ? (
-                          <span className={CONTACTED_PILL}>
-                            <Check className="size-3" />
-                            Contactado
-                          </span>
+                      <div className="flex flex-col gap-1.5">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <Link
+                            href={`/events/${item.event.id}`}
+                            className="hover:underline"
+                          >
+                            {item.event.title}
+                          </Link>
+                          {item.isThisWeek && !isCloseThisWeek ? (
+                            <span className={THIS_WEEK_PILL}>Esta semana</span>
+                          ) : null}
+                          {item.cadenceLabel ? (
+                            <span className={CADENCE_PILL}>{item.cadenceLabel}</span>
+                          ) : null}
+                          {isCloseThisWeek && item.contactedThisWeek ? (
+                            <span className={CONTACTED_PILL}>
+                              <Check className="size-3" />
+                              Contactado
+                            </span>
+                          ) : null}
+                        </div>
+                        {isResearch && item.researchRequests?.length ? (
+                          <div className="flex flex-wrap gap-1.5">
+                            {item.researchRequests.map((request) => (
+                              <span
+                                key={request.id}
+                                className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium"
+                              >
+                                {request.title}
+                                <span className="text-muted-foreground">
+                                  · {getResearchStatusLabel(request.status)}
+                                </span>
+                                <button
+                                  type="button"
+                                  disabled={isPending}
+                                  onClick={() =>
+                                    handleCompleteResearch(request.id)
+                                  }
+                                  className="rounded-full p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+                                  aria-label={`Marcar ${request.title} como hecha`}
+                                >
+                                  <Check className="size-3" />
+                                </button>
+                              </span>
+                            ))}
+                          </div>
                         ) : null}
                       </div>
                     </TableCell>
@@ -317,7 +387,7 @@ export function FollowUpQueueTable({
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-1.5">
-                        {item.step || isCloseThisWeek ? (
+                        {item.step || isCloseThisWeek || isResearch ? (
                           <Button
                             type="button"
                             size="sm"
@@ -334,7 +404,7 @@ export function FollowUpQueueTable({
                             WhatsApp
                           </Button>
                         ) : null}
-                        {isCloseThisWeek ? null : bucket !==
+                        {isResearch || isCloseThisWeek ? null : bucket !==
                           FOLLOW_UP_BUCKET.NO_RESPONSE ? (
                           <Button
                             type="button"
@@ -415,6 +485,7 @@ export function FollowUpQueueTable({
 }
 
 type FollowUpQueueTotals = {
+  research: number;
   closeThisWeek: number;
   step1: number;
   step2: number;
@@ -430,6 +501,11 @@ export function FollowUpQueueSummary({
   totals: FollowUpQueueTotals;
 }) {
   const cards = [
+    {
+      bucket: FOLLOW_UP_BUCKET.RESEARCH,
+      count: counts.research,
+      total: totals.research,
+    },
     {
       bucket: FOLLOW_UP_BUCKET.CLOSE_THIS_WEEK,
       count: counts.closeThisWeek,
@@ -458,7 +534,7 @@ export function FollowUpQueueSummary({
   ] as const;
 
   return (
-    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
       {cards.map(({ bucket, count, total }) => {
         const meta = BUCKET_META[bucket];
         const Icon = meta.icon;

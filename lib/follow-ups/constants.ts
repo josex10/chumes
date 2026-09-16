@@ -6,6 +6,7 @@ export const FOLLOW_UP_DELAYS = {
 } as const;
 
 export const FOLLOW_UP_BUCKET = {
+  RESEARCH: "RESEARCH",
   CLOSE_THIS_WEEK: "CLOSE_THIS_WEEK",
   STEP_1: "STEP_1",
   STEP_2: "STEP_2",

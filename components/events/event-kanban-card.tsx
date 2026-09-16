@@ -12,6 +12,7 @@ import {
   GripVertical,
   Megaphone,
   Phone,
+  Search,
   UserRound,
 } from "lucide-react";
 import { EventStatusSelect } from "@/components/events/event-status-select";
@@ -51,6 +52,7 @@ const badgeIcons = {
   "follow-up-due": AlertTriangle,
   "quote-status": FileText,
   website: Globe,
+  research: Search,
 };
 
 function EventInvoiceStatus({ event }: { event: EventWithRelations }) {

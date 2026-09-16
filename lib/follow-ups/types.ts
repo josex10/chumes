@@ -1,5 +1,8 @@
 import type { FollowUpBucket } from "@/lib/follow-ups/constants";
-import type { EventWithRelations } from "@/lib/supabase/types";
+import type {
+  EventOpenResearchItem,
+  EventWithRelations,
+} from "@/lib/supabase/types";
 
 export type FollowUpQueueItem = {
   event: EventWithRelations;
@@ -12,9 +15,11 @@ export type FollowUpQueueItem = {
   isThisWeek: boolean;
   cadenceLabel: string | null;
   contactedThisWeek: boolean;
+  researchRequests?: EventOpenResearchItem[];
 };
 
 export type FollowUpQueue = {
+  research: FollowUpQueueItem[];
   closeThisWeek: FollowUpQueueItem[];
   step1: FollowUpQueueItem[];
   step2: FollowUpQueueItem[];

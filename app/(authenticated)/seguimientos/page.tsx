@@ -33,11 +33,12 @@ export default async function SeguimientosPage() {
           <h1 className="inline-flex items-center gap-1.5 text-3xl font-semibold tracking-tight">
             <MessageCircleMore className="size-7 text-muted-foreground" />
             Seguimientos
-            <EventsHint description="Cola de contactos para hoy y vencidos, más eventos comerciales con fecha esta semana. El kanban no se mueve al escribirle al cliente." />
+            <EventsHint description="Cola de contactos para hoy y vencidos, investigaciones de productos pendientes, más eventos comerciales con fecha esta semana. El kanban no se mueve al escribirle al cliente." />
           </h1>
           <p className="mt-2 text-muted-foreground">
-            Estos son los clientes a los que deberías escribirles hoy, y los
-            eventos de esta semana aún sin cerrar.
+            Estos son los clientes a los que deberías escribirles hoy, las
+            investigaciones abiertas, y los eventos de esta semana aún sin
+            cerrar.
           </p>
         </div>
         <Link
@@ -54,6 +55,7 @@ export default async function SeguimientosPage() {
 
       <FollowUpQueueSummary
         counts={{
+          research: queue.research.length,
           closeThisWeek: queue.closeThisWeek.length,
           step1: queue.step1.length,
           step2: queue.step2.length,
@@ -61,6 +63,7 @@ export default async function SeguimientosPage() {
           noResponse: queue.noResponse.length,
         }}
         totals={{
+          research: sumQuoteTotals(queue.research),
           closeThisWeek: sumQuoteTotals(queue.closeThisWeek),
           step1: sumQuoteTotals(queue.step1),
           step2: sumQuoteTotals(queue.step2),
@@ -69,6 +72,11 @@ export default async function SeguimientosPage() {
         }}
       />
 
+      <FollowUpQueueTable
+        items={queue.research}
+        bucket={FOLLOW_UP_BUCKET.RESEARCH}
+        templates={templates}
+      />
       <FollowUpQueueTable
         items={queue.closeThisWeek}
         bucket={FOLLOW_UP_BUCKET.CLOSE_THIS_WEEK}

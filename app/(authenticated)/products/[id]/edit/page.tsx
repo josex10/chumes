@@ -10,7 +10,6 @@ import {
 } from "@/components/products/product-edit-tabs";
 import { ProductInventoryTab } from "@/components/products/product-inventory-tab";
 import { ProductReservationsTab } from "@/components/products/product-reservations-tab";
-import { EVENT_PHASE } from "@/lib/events/constants";
 import { getManualMovementTypes, getMovementsByProduct } from "@/lib/inventory/queries";
 import { getProductImages } from "@/lib/products/image-queries";
 import { PRODUCT_EDIT_TAB, PRODUCT_PRICE_TYPE, PRODUCT_TYPE } from "@/lib/products/constants";
@@ -32,7 +31,7 @@ export const dynamic = "force-dynamic";
 
 type EditProductPageProps = {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ tab?: string; op?: string; com?: string }>;
+  searchParams: Promise<{ tab?: string; page?: string }>;
 };
 
 export default async function EditProductPage({
@@ -40,7 +39,7 @@ export default async function EditProductPage({
   searchParams,
 }: EditProductPageProps) {
   const { id } = await params;
-  const { tab: tabParam, op: opParam, com: comParam } = await searchParams;
+  const { tab: tabParam, page: pageParam } = await searchParams;
   const product = await getProductById(id);
 
   if (!product) {
@@ -51,29 +50,17 @@ export default async function EditProductPage({
   const activeTab = parseProductEditTab(tabParam, isBundle);
 
   if (activeTab === PRODUCT_EDIT_TAB.RESERVATIONS) {
-    const [operational, commercial] = await Promise.all([
-      getProductEventReservations(
-        id,
-        EVENT_PHASE.OPERATIONAL,
-        parseReservationPage(opParam),
-      ),
-      getProductEventReservations(
-        id,
-        EVENT_PHASE.COMMERCIAL,
-        parseReservationPage(comParam),
-      ),
-    ]);
+    const operational = await getProductEventReservations(
+      id,
+      parseReservationPage(pageParam),
+    );
 
     return (
       <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 px-6 py-10">
         <ProductEditHeader product={product} />
         <ProductEditTabs productId={id} activeTab={activeTab} isBundle={isBundle} />
         <div className="pt-2">
-          <ProductReservationsTab
-            productId={id}
-            operational={operational}
-            commercial={commercial}
-          />
+          <ProductReservationsTab productId={id} operational={operational} />
         </div>
       </main>
     );

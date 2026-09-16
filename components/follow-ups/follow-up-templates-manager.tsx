@@ -203,8 +203,9 @@ export function FollowUpTemplatesManager({
               {isEditing ? "Editar plantilla" : "Nueva plantilla"}
             </DialogTitle>
             <DialogDescription>
-              Usá {"{{nombre}}"}, {"{{evento}}"}, {"{{fecha}}"}, {"{{ubicacion}}"}{" "}
-              y {"{{monto}}"}. El texto se puede ajustar al enviarlo.
+              Usá {"{{nombre}}"}, {"{{evento}}"}, {"{{fecha}}"}, {"{{ubicacion}}"}
+              , {"{{monto}}"} y {"{{solicitud}}"}. El texto se puede ajustar al
+              enviarlo.
             </DialogDescription>
           </DialogHeader>
           {editor ? (

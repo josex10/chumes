@@ -472,6 +472,7 @@ export type EventWithRelations = Event & {
   event_sources: EventSource;
   quotes?: (Quote & { quote_statuses?: QuoteStatus; quote_items?: { id: string }[] })[];
   payment_summary?: PaymentSummary | null;
+  open_research?: EventOpenResearchItem[];
 };
 
 export type FollowUpTemplate = {
@@ -513,6 +514,42 @@ export type EventLogistics = {
   picked_up_at: string | null;
   created_at: string;
   updated_at: string;
+};
+
+export type ResearchRequestStatus = "OPEN" | "WAITING_CLIENT" | "DONE";
+export type ResearchUpdateKind = "NOTE" | "WHATSAPP";
+
+export type EventResearchRequest = {
+  id: string;
+  event_id: string;
+  title: string;
+  status: ResearchRequestStatus;
+  created_at: string;
+  updated_at: string;
+  completed_at: string | null;
+  created_by: string | null;
+  updated_by: string | null;
+};
+
+export type EventResearchUpdate = {
+  id: string;
+  request_id: string;
+  kind: ResearchUpdateKind;
+  body: string;
+  message_body: string | null;
+  created_at: string;
+  created_by: string | null;
+};
+
+export type EventResearchRequestWithUpdates = EventResearchRequest & {
+  event_research_updates: EventResearchUpdate[];
+};
+
+export type EventOpenResearchItem = {
+  id: string;
+  title: string;
+  status: Exclude<ResearchRequestStatus, "DONE">;
+  created_at: string;
 };
 
 export type Database = {
@@ -1241,6 +1278,49 @@ export type Database = {
             foreignKeyName: "event_logistics_event_id_fkey";
             columns: ["event_id"];
             referencedRelation: "events";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      event_research_requests: {
+        Row: EventResearchRequest;
+        Insert: {
+          event_id: string;
+          title: string;
+          status?: ResearchRequestStatus;
+          completed_at?: string | null;
+          created_by?: string | null;
+          updated_by?: string | null;
+        };
+        Update: Partial<
+          Database["public"]["Tables"]["event_research_requests"]["Insert"]
+        >;
+        Relationships: [
+          {
+            foreignKeyName: "event_research_requests_event_id_fkey";
+            columns: ["event_id"];
+            referencedRelation: "events";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      event_research_updates: {
+        Row: EventResearchUpdate;
+        Insert: {
+          request_id: string;
+          kind: ResearchUpdateKind;
+          body: string;
+          message_body?: string | null;
+          created_by?: string | null;
+        };
+        Update: Partial<
+          Database["public"]["Tables"]["event_research_updates"]["Insert"]
+        >;
+        Relationships: [
+          {
+            foreignKeyName: "event_research_updates_request_id_fkey";
+            columns: ["request_id"];
+            referencedRelation: "event_research_requests";
             referencedColumns: ["id"];
           },
         ];

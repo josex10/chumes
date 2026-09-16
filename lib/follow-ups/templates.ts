@@ -7,6 +7,7 @@ export type FollowUpTemplateVars = {
   fecha: string;
   ubicacion: string;
   monto: string;
+  solicitud: string;
 };
 
 export function buildFollowUpTemplateVars(input: {
@@ -15,6 +16,7 @@ export function buildFollowUpTemplateVars(input: {
   eventDate: string | null | undefined;
   location: string | null | undefined;
   quoteTotal: number | null | undefined;
+  solicitud?: string | null | undefined;
 }): FollowUpTemplateVars {
   const eventDateValue = input.eventDate
     ? input.eventDate.includes("T")
@@ -27,6 +29,7 @@ export function buildFollowUpTemplateVars(input: {
     input.quoteTotal != null && Number.isFinite(input.quoteTotal)
       ? formatCurrency(input.quoteTotal)
       : null;
+  const solicitud = input.solicitud?.trim();
 
   return {
     nombre: input.customerName.trim() || "cliente",
@@ -34,6 +37,7 @@ export function buildFollowUpTemplateVars(input: {
     fecha: fecha ? `Fecha del evento: ${fecha}` : "",
     ubicacion: ubicacion ? `Lugar: ${ubicacion}` : "",
     monto: monto ? `Cotización: ${monto}` : "",
+    solicitud: solicitud || "lo que estamos buscando",
   };
 }
 

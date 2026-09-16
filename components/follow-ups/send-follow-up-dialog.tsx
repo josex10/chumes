@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { MessageCircle, Loader2 } from "lucide-react";
 import { completeEventFollowUp, logAdHocFollowUp } from "@/lib/follow-ups/actions";
+import { notifyResearchClient } from "@/lib/research/actions";
 import type { FollowUpStep } from "@/lib/follow-ups/constants";
 import { getFollowUpPhaseLabel } from "@/lib/follow-ups/constants";
 import {
@@ -43,6 +44,8 @@ export type FollowUpMessageContext = {
   location: string | null;
   quoteTotal: number | null;
   phone: string | null;
+  researchRequestId?: string;
+  solicitud?: string;
 };
 
 type SendFollowUpDialogProps = {
@@ -80,19 +83,32 @@ export function SendFollowUpDialog({
         eventDate: context.eventDate,
         location: context.location,
         quoteTotal: context.quoteTotal,
+        solicitud: context.solicitud,
       }),
     [context],
   );
   const [message, setMessage] = useState("");
+  const isResearch = Boolean(context.researchRequestId);
+  const isAdHoc = !context.step && !isResearch;
 
   useEffect(() => {
     if (!open) return;
+    setError(null);
+
+    if (isResearch) {
+      const researchTemplate = templates.find((item) =>
+        item.body.includes("{{solicitud}}"),
+      );
+      if (researchTemplate) {
+        setTemplateId(researchTemplate.id);
+        setMessage(renderFollowUpTemplate(researchTemplate.body, vars));
+        return;
+      }
+    }
+
     setTemplateId("");
     setMessage("");
-    setError(null);
-  }, [open, context.eventId, context.step]);
-
-  const isAdHoc = !context.step;
+  }, [open, context.eventId, context.step, context.researchRequestId, isResearch, templates, vars]);
   const phoneLabel = context.phone ? formatPhoneNumber(context.phone) : null;
   const whatsappUrl = context.phone
     ? getCustomerWhatsAppUrl(context.phone, message)
@@ -123,18 +139,24 @@ export function SendFollowUpDialog({
     openWhatsApp(whatsappUrl);
 
     startTransition(async () => {
-      const result = isAdHoc
-        ? await logAdHocFollowUp({
-            eventId: context.eventId,
+      const result = isResearch
+        ? await notifyResearchClient({
+            requestId: context.researchRequestId!,
             templateId: templateId || null,
             messageBody: message,
           })
-        : await completeEventFollowUp({
-            eventId: context.eventId,
-            step: context.step!,
-            templateId: templateId || null,
-            messageBody: message,
-          });
+        : isAdHoc
+          ? await logAdHocFollowUp({
+              eventId: context.eventId,
+              templateId: templateId || null,
+              messageBody: message,
+            })
+          : await completeEventFollowUp({
+              eventId: context.eventId,
+              step: context.step!,
+              templateId: templateId || null,
+              messageBody: message,
+            });
 
       if (!result.success) {
         setError(result.error);
@@ -151,15 +173,24 @@ export function SendFollowUpDialog({
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>
-            {isAdHoc ? "WhatsApp — esta semana" : "Enviar seguimiento"}
+            {isResearch
+              ? "Avisar al cliente"
+              : isAdHoc
+                ? "WhatsApp — esta semana"
+                : "Enviar seguimiento"}
           </DialogTitle>
           <DialogDescription>
             Mensaje para {context.customerName}
-            {phoneLabel ? ` · ${phoneLabel}` : ""}. Se abre WhatsApp con el
-            texto listo
-            {isAdHoc
-              ? " y se registra el contacto, sin avanzar el paso de seguimiento."
-              : " y se registra este paso."}
+            {phoneLabel ? ` · ${phoneLabel}` : ""}
+            {isResearch && context.solicitud
+              ? ` · ${context.solicitud}`
+              : ""}
+            . Se abre WhatsApp con el texto listo
+            {isResearch
+              ? " y se guarda en el historial de la investigación."
+              : isAdHoc
+                ? " y se registra el contacto, sin avanzar el paso de seguimiento."
+                : " y se registra este paso."}
           </DialogDescription>
         </DialogHeader>
 

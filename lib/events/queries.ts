@@ -10,6 +10,7 @@ import {
 } from "@/lib/events/constants";
 import { getQuoteById } from "@/lib/quotes/queries";
 import { attachPaymentSummariesToEvents, getEventPaymentData } from "@/lib/payments/queries";
+import { attachOpenResearch } from "@/lib/research/queries";
 import type { EventReservationPdfData } from "@/lib/events/pdf/types";
 import type {
   EventStatus,
@@ -71,7 +72,8 @@ async function attachPaymentSummaries(
 
 async function enrichEvents(events: EventWithRelations[]): Promise<EventWithRelations[]> {
   const withQuotes = await attachQuotesToEvents(events);
-  return attachPaymentSummaries(withQuotes);
+  const withPayments = await attachPaymentSummaries(withQuotes);
+  return attachOpenResearch(withPayments);
 }
 
 export async function getEventStatuses(): Promise<EventStatus[]> {

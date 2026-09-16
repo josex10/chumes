@@ -54,7 +54,19 @@ export function getEventBadges(event: EventWithRelations): EventBadge[] {
     });
   }
 
-  if (event.follow_up_at) {
+  const openResearchCount = event.open_research?.length ?? 0;
+  if (openResearchCount > 0) {
+    badges.push({
+      key: "research",
+      label:
+        openResearchCount === 1
+          ? "Investigando"
+          : `Investigando · ${openResearchCount}`,
+      variant: "warning",
+    });
+  }
+
+  if (event.follow_up_at && openResearchCount === 0) {
     const followUp = new Date(event.follow_up_at);
     if (followUp <= new Date()) {
       badges.push({

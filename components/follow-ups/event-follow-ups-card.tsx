@@ -40,6 +40,7 @@ type EventFollowUpsCardProps = {
   templates: FollowUpTemplate[];
   progress: FollowUpProgress;
   isCommercial: boolean;
+  hasOpenResearch?: boolean;
 };
 
 export function EventFollowUpsCard({
@@ -48,6 +49,7 @@ export function EventFollowUpsCard({
   templates,
   progress,
   isCommercial,
+  hasOpenResearch = false,
 }: EventFollowUpsCardProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -59,7 +61,10 @@ export function EventFollowUpsCard({
     event.customers.phone,
   );
   const canSend =
-    isCommercial && progress.kind === "pending" && Boolean(phone);
+    isCommercial &&
+    progress.kind === "pending" &&
+    Boolean(phone) &&
+    !hasOpenResearch;
 
   const context = useMemo(() => {
     if (progress.kind !== "pending") return null;
@@ -100,7 +105,10 @@ export function EventFollowUpsCard({
               type="button"
               variant="outline"
               size="sm"
-              disabled={isPending}
+              disabled={
+                isPending ||
+                (hasOpenResearch && progress.kind === "paused")
+              }
               onClick={handlePauseOrResume}
             >
               {isPending ? (
@@ -125,6 +133,12 @@ export function EventFollowUpsCard({
         ) : null}
       </CardHeader>
       <CardContent className="space-y-4">
+        {hasOpenResearch ? (
+          <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-800 dark:text-amber-300">
+            La cadencia de 3/5/10 días está pausada mientras hay una
+            investigación abierta. Avisá al cliente desde Investigación.
+          </p>
+        ) : null}
         {progress.kind === "paused" ? (
           <p className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-800 dark:text-emerald-300">
             Seguimiento pausado porque el cliente respondió.

@@ -16,6 +16,7 @@ import {
   getFollowUpProgress,
   getNextFollowUpDateKey,
 } from "@/lib/follow-ups/schedule";
+import { countOpenResearchRequests } from "@/lib/research/queries";
 
 type ActionResult =
   | { success: true }
@@ -254,6 +255,14 @@ export async function resumeEventFollowUp(eventId: string): Promise<ActionResult
 
     if (!event) {
       return { success: false, error: "Evento no encontrado." };
+    }
+
+    if ((await countOpenResearchRequests(eventId)) > 0) {
+      return {
+        success: false,
+        error:
+          "Cerrá las investigaciones abiertas antes de reanudar la cadencia de seguimiento.",
+      };
     }
 
     const completed = await getCompletedFollowUps(eventId);

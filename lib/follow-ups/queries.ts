@@ -15,6 +15,7 @@ import {
   getFollowUpProgress,
 } from "@/lib/follow-ups/schedule";
 import type { FollowUpQueue, FollowUpQueueItem } from "@/lib/follow-ups/types";
+import { getAllOpenResearchItems } from "@/lib/research/queries";
 import type {
   EventFollowUpWithRelations,
   EventWithRelations,
@@ -64,6 +65,23 @@ async function getCommercialFollowUpEvents(): Promise<EventWithRelations[]> {
 
   if (error) {
     console.error("[getCommercialFollowUpEvents]", error.message);
+    return [];
+  }
+
+  return (data ?? []) as EventWithRelations[];
+}
+
+async function getEventsByIds(eventIds: string[]): Promise<EventWithRelations[]> {
+  if (eventIds.length === 0) return [];
+
+  const supabase = createAdminSupabaseClient();
+  const { data, error } = await supabase
+    .from("events")
+    .select(FOLLOW_UP_EVENT_SELECT)
+    .in("id", eventIds);
+
+  if (error) {
+    console.error("[getEventsByIds]", error.message);
     return [];
   }
 
@@ -190,6 +208,7 @@ export async function getEventFollowUps(
 
 function emptyQueue(): FollowUpQueue {
   return {
+    research: [],
     closeThisWeek: [],
     step1: [],
     step2: [],
@@ -209,6 +228,7 @@ function toQueueItem(
     isThisWeek: boolean;
     cadenceLabel: string | null;
     contactedThisWeek: boolean;
+    researchRequests?: FollowUpQueueItem["researchRequests"];
   },
 ): FollowUpQueueItem {
   return {
@@ -225,81 +245,134 @@ function toQueueItem(
     isThisWeek: input.isThisWeek,
     cadenceLabel: input.cadenceLabel,
     contactedThisWeek: input.contactedThisWeek,
+    researchRequests: input.researchRequests,
   };
 }
 
 export async function getFollowUpQueue(): Promise<FollowUpQueue> {
   const todayKey = todayInCostaRica();
-  const events = await attachQuoteTotals(await getCommercialFollowUpEvents());
-  const queue = emptyQueue();
-
-  if (events.length === 0) return queue;
-
-  const { completedByEvent, contactedThisWeek, ok } = await getCompletedByEvent(
-    events.map((event) => event.id),
-    todayKey,
+  const commercialEvents = await attachQuoteTotals(
+    await getCommercialFollowUpEvents(),
   );
+  const openResearchByEvent = await getAllOpenResearchItems();
+  const researchEventIds = [...openResearchByEvent.keys()];
+  const knownIds = new Set(commercialEvents.map((event) => event.id));
+  const extraResearchEvents = await attachQuoteTotals(
+    await getEventsByIds(researchEventIds.filter((id) => !knownIds.has(id))),
+  );
+  const eventsById = new Map<string, EventWithRelations>();
+  for (const event of [...commercialEvents, ...extraResearchEvents]) {
+    eventsById.set(event.id, event);
+  }
 
-  if (!ok) return queue;
+  const queue = emptyQueue();
+  const researchingIds = new Set<string>();
 
-  for (const event of events) {
-    const progress = getFollowUpProgress(
-      event.created_at,
-      completedByEvent.get(event.id) ?? [],
-      event.follow_up_paused_at,
-    );
+  for (const eventId of researchEventIds) {
+    const event = eventsById.get(eventId);
+    if (!event || event.event_statuses.phase === EVENT_PHASE.TERMINAL) continue;
+    const requests = openResearchByEvent.get(eventId) ?? [];
+    if (requests.length === 0) continue;
+
+    researchingIds.add(eventId);
+    const oldest = requests[0];
+    const dueDateKey = toCostaRicaDateKey(oldest.created_at);
     const eventDateKey = event.event_date
       ? toEventDateKey(event.event_date)
       : null;
     const isThisWeek = Boolean(
       eventDateKey && isDateKeyInCostaRicaWeek(eventDateKey, todayKey),
     );
-    const contacted = contactedThisWeek.has(event.id);
-    const cadenceDue =
-      progress.kind !== "paused" && progress.dueDateKey <= todayKey;
 
-    if (cadenceDue) {
-      const item = toQueueItem(event, {
-        bucket: progress.bucket,
-        step: progress.kind === "pending" ? progress.step : null,
-        dueDateKey: progress.dueDateKey,
-        dueLabel: formatDueLabel(progress.dueDateKey, todayKey),
+    queue.research.push(
+      toQueueItem(event, {
+        bucket: FOLLOW_UP_BUCKET.RESEARCH,
+        step: null,
+        dueDateKey,
+        dueLabel: formatDueLabel(dueDateKey, todayKey),
         isThisWeek,
         cadenceLabel: null,
-        contactedThisWeek: contacted,
-      });
+        contactedThisWeek: false,
+        researchRequests: requests,
+      }),
+    );
+  }
 
-      if (progress.bucket === FOLLOW_UP_BUCKET.STEP_1) queue.step1.push(item);
-      if (progress.bucket === FOLLOW_UP_BUCKET.STEP_2) queue.step2.push(item);
-      if (progress.bucket === FOLLOW_UP_BUCKET.STEP_3) queue.step3.push(item);
-      if (progress.bucket === FOLLOW_UP_BUCKET.NO_RESPONSE) {
-        queue.noResponse.push(item);
-      }
-    }
+  if (commercialEvents.length === 0 && queue.research.length === 0) {
+    return queue;
+  }
 
-    if (isThisWeek && eventDateKey) {
-      const pendingDue =
-        progress.kind === "pending" && progress.dueDateKey <= todayKey;
-      queue.closeThisWeek.push(
-        toQueueItem(event, {
-          bucket: FOLLOW_UP_BUCKET.CLOSE_THIS_WEEK,
-          step: pendingDue ? progress.step : null,
-          dueDateKey: eventDateKey,
-          dueLabel: formatWeekEventDateLabel(eventDateKey, todayKey),
-          isThisWeek: true,
-          cadenceLabel: getFollowUpCadenceLabel(progress, todayKey),
-          contactedThisWeek: contacted,
-        }),
+  const { completedByEvent, contactedThisWeek, ok } = await getCompletedByEvent(
+    commercialEvents.map((event) => event.id),
+    todayKey,
+  );
+
+  if (!ok && queue.research.length === 0) return queue;
+
+  if (ok) {
+    for (const event of commercialEvents) {
+      if (researchingIds.has(event.id)) continue;
+
+      const progress = getFollowUpProgress(
+        event.created_at,
+        completedByEvent.get(event.id) ?? [],
+        event.follow_up_paused_at,
       );
+      const eventDateKey = event.event_date
+        ? toEventDateKey(event.event_date)
+        : null;
+      const isThisWeek = Boolean(
+        eventDateKey && isDateKeyInCostaRicaWeek(eventDateKey, todayKey),
+      );
+      const contacted = contactedThisWeek.has(event.id);
+      const cadenceDue =
+        progress.kind !== "paused" && progress.dueDateKey <= todayKey;
+
+      if (cadenceDue) {
+        const item = toQueueItem(event, {
+          bucket: progress.bucket,
+          step: progress.kind === "pending" ? progress.step : null,
+          dueDateKey: progress.dueDateKey,
+          dueLabel: formatDueLabel(progress.dueDateKey, todayKey),
+          isThisWeek,
+          cadenceLabel: null,
+          contactedThisWeek: contacted,
+        });
+
+        if (progress.bucket === FOLLOW_UP_BUCKET.STEP_1) queue.step1.push(item);
+        if (progress.bucket === FOLLOW_UP_BUCKET.STEP_2) queue.step2.push(item);
+        if (progress.bucket === FOLLOW_UP_BUCKET.STEP_3) queue.step3.push(item);
+        if (progress.bucket === FOLLOW_UP_BUCKET.NO_RESPONSE) {
+          queue.noResponse.push(item);
+        }
+      }
+
+      if (isThisWeek && eventDateKey) {
+        const pendingDue =
+          progress.kind === "pending" && progress.dueDateKey <= todayKey;
+        queue.closeThisWeek.push(
+          toQueueItem(event, {
+            bucket: FOLLOW_UP_BUCKET.CLOSE_THIS_WEEK,
+            step: pendingDue ? progress.step : null,
+            dueDateKey: eventDateKey,
+            dueLabel: formatWeekEventDateLabel(eventDateKey, todayKey),
+            isThisWeek: true,
+            cadenceLabel: getFollowUpCadenceLabel(progress, todayKey),
+            contactedThisWeek: contacted,
+          }),
+        );
+      }
     }
   }
 
+  queue.research = sortByDue(queue.research);
   queue.step1 = sortByDue(queue.step1);
   queue.step2 = sortByDue(queue.step2);
   queue.step3 = sortByDue(queue.step3);
   queue.noResponse = sortByDue(queue.noResponse);
   queue.closeThisWeek = sortCloseThisWeek(queue.closeThisWeek);
   queue.total =
+    queue.research.length +
     queue.step1.length +
     queue.step2.length +
     queue.step3.length +
@@ -311,19 +384,41 @@ export async function getFollowUpQueue(): Promise<FollowUpQueue> {
 export async function getFollowUpPendingCount(): Promise<number> {
   try {
     const todayKey = todayInCostaRica();
-    const events = await getCommercialFollowUpEvents();
-    if (events.length === 0) return 0;
+    const commercialEvents = await getCommercialFollowUpEvents();
+    const openResearchByEvent = await getAllOpenResearchItems();
+    const researchEventIds = [...openResearchByEvent.keys()];
+    const knownIds = new Set(commercialEvents.map((event) => event.id));
+    const extraResearchEvents = await getEventsByIds(
+      researchEventIds.filter((id) => !knownIds.has(id)),
+    );
+    const eventsById = new Map<string, EventWithRelations>();
+    for (const event of [...commercialEvents, ...extraResearchEvents]) {
+      eventsById.set(event.id, event);
+    }
+
+    const researchingIds = new Set<string>();
+    for (const eventId of researchEventIds) {
+      const event = eventsById.get(eventId);
+      if (!event || event.event_statuses.phase === EVENT_PHASE.TERMINAL) {
+        continue;
+      }
+      researchingIds.add(eventId);
+    }
+
+    if (commercialEvents.length === 0) return researchingIds.size;
 
     const { completedByEvent, ok } = await getCompletedByEvent(
-      events.map((event) => event.id),
+      commercialEvents.map((event) => event.id),
       todayKey,
     );
-    if (!ok) return 0;
+    if (!ok) return researchingIds.size;
 
     let cadenceDue = 0;
     let thisWeekExtra = 0;
 
-    for (const event of events) {
+    for (const event of commercialEvents) {
+      if (researchingIds.has(event.id)) continue;
+
       const progress = getFollowUpProgress(
         event.created_at,
         completedByEvent.get(event.id) ?? [],
@@ -343,7 +438,7 @@ export async function getFollowUpPendingCount(): Promise<number> {
       if (inThisWeek) thisWeekExtra += 1;
     }
 
-    return cadenceDue + thisWeekExtra;
+    return researchingIds.size + cadenceDue + thisWeekExtra;
   } catch (error) {
     console.error("[getFollowUpPendingCount]", error);
     return 0;

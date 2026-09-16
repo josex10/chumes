@@ -14,7 +14,10 @@ import { canTransitionStatus, getStatusPhase, withLostArchiveAtEnd } from "@/lib
 import { EVENT_PHASE, EVENT_STATUS, EVENTS_PIPELINE_TAB } from "@/lib/events/constants";
 import { buildEventsHref } from "@/lib/events/events-url";
 import { EventFollowUpsCard } from "@/components/follow-ups/event-follow-ups-card";
+import { EventResearchCard } from "@/components/events/event-research-card";
 import { getEventFollowUps, getFollowUpTemplates } from "@/lib/follow-ups/queries";
+import { getEventResearchRequests } from "@/lib/research/queries";
+import { RESEARCH_STATUS } from "@/lib/research/constants";
 import { getFollowUpProgress } from "@/lib/follow-ups/schedule";
 import { EventQuotePanel } from "@/components/events/event-quote-panel";
 import { EventPaymentsPanel } from "@/components/events/event-payments-panel";
@@ -56,13 +59,14 @@ function getSelectableStatuses(
 
 export default async function EventDetailPage({ params }: EventDetailPageProps) {
   const { id } = await params;
-  const [event, allStatuses, customerTypes, followUps, templates] =
+  const [event, allStatuses, customerTypes, followUps, templates, researchRequests] =
     await Promise.all([
       getEventById(id),
       getEventStatuses(),
       getCustomerTypes(),
       getEventFollowUps(id),
       getFollowUpTemplates(true),
+      getEventResearchRequests(id),
     ]);
 
   if (!event) {
@@ -202,12 +206,22 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
             canEdit={phase !== EVENT_PHASE.TERMINAL}
           />
 
+          <EventResearchCard
+            event={event}
+            requests={researchRequests}
+            templates={templates}
+            canEdit={phase !== EVENT_PHASE.TERMINAL}
+          />
+
           <EventFollowUpsCard
             event={event}
             followUps={followUps}
             templates={templates}
             progress={followUpProgress}
             isCommercial={isCommercial}
+            hasOpenResearch={researchRequests.some(
+              (request) => request.status !== RESEARCH_STATUS.DONE,
+            )}
           />
 
           <EventQuotePanel
