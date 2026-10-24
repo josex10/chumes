@@ -62,6 +62,7 @@ export async function getPublicProductCategories(): Promise<ProductCategory[]> {
     .from("product_categories")
     .select("*")
     .eq("is_active", true)
+    .eq("is_public", true)
     .order("name");
 
   if (error) {
@@ -79,10 +80,12 @@ export async function getPublicProducts(options?: {
   let query = supabase
     .from("products")
     .select(
-      "*, product_categories(*), product_types(*), product_tracking_types(*)",
+      "*, product_categories!inner(*), product_types(*), product_tracking_types(*)",
     )
     .eq("is_active", true)
     .eq("is_public", true)
+    .eq("product_categories.is_active", true)
+    .eq("product_categories.is_public", true)
     .order("sort_order")
     .order("name");
 
@@ -107,11 +110,13 @@ export async function getPublicProductBySlug(
   const { data, error } = await supabase
     .from("products")
     .select(
-      "*, product_categories(*), product_types(*), product_tracking_types(*)",
+      "*, product_categories!inner(*), product_types(*), product_tracking_types(*)",
     )
     .eq("slug", slug)
     .eq("is_active", true)
     .eq("is_public", true)
+    .eq("product_categories.is_active", true)
+    .eq("product_categories.is_public", true)
     .maybeSingle();
 
   if (error || !data) {
@@ -134,11 +139,13 @@ export async function getPublicProductsByIds(
   const { data, error } = await supabase
     .from("products")
     .select(
-      "*, product_categories(*), product_types(*), product_tracking_types(*)",
+      "*, product_categories!inner(*), product_types(*), product_tracking_types(*)",
     )
     .in("id", productIds)
     .eq("is_active", true)
-    .eq("is_public", true);
+    .eq("is_public", true)
+    .eq("product_categories.is_active", true)
+    .eq("product_categories.is_public", true);
 
   if (error) {
     console.error("[getPublicProductsByIds]", error.message);

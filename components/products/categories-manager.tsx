@@ -2,11 +2,20 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { CircleOff, Loader2, Pencil, Plus, Trash2 } from "lucide-react";
+import {
+  CircleOff,
+  EyeOff,
+  Globe,
+  Loader2,
+  Pencil,
+  Plus,
+  Trash2,
+} from "lucide-react";
 import {
   createCategory,
   deleteCategory,
   toggleCategoryActive,
+  toggleCategoryPublic,
   updateCategory,
 } from "@/lib/products/actions";
 import { ActiveStatusDot } from "@/components/products/active-status-dot";
@@ -43,12 +52,14 @@ type EditorState = {
   name: string;
   description: string;
   isActive: boolean;
+  isPublic: boolean;
 };
 
 const EMPTY_EDITOR: EditorState = {
   name: "",
   description: "",
   isActive: true,
+  isPublic: false,
 };
 
 export function CategoriesManager({ categories }: CategoriesManagerProps) {
@@ -59,6 +70,9 @@ export function CategoriesManager({ categories }: CategoriesManagerProps) {
   );
   const [error, setError] = useState<string | null>(null);
   const [pendingToggleId, setPendingToggleId] = useState<number | null>(null);
+  const [pendingPublicToggleId, setPendingPublicToggleId] = useState<number | null>(
+    null,
+  );
   const [isPending, startTransition] = useTransition();
   const isEditing = Boolean(editor?.id);
 
@@ -73,6 +87,7 @@ export function CategoriesManager({ categories }: CategoriesManagerProps) {
       name: category.name,
       description: category.description ?? "",
       isActive: category.is_active,
+      isPublic: category.is_public,
     });
     setError(null);
   }
@@ -92,11 +107,13 @@ export function CategoriesManager({ categories }: CategoriesManagerProps) {
             name,
             description: editor.description,
             is_active: editor.isActive,
+            is_public: editor.isActive ? editor.isPublic : false,
           })
         : await createCategory({
             name,
             description: editor.description,
-            is_active: true,
+            is_active: editor.isActive,
+            is_public: editor.isActive ? editor.isPublic : false,
           });
 
       if (!result.success) {
@@ -128,6 +145,19 @@ export function CategoriesManager({ categories }: CategoriesManagerProps) {
     startTransition(async () => {
       const result = await toggleCategoryActive(category.id);
       setPendingToggleId(null);
+      if (!result.success) {
+        setError(result.error);
+        return;
+      }
+      router.refresh();
+    });
+  }
+
+  function handleTogglePublic(category: ProductCategoryListItem) {
+    setPendingPublicToggleId(category.id);
+    startTransition(async () => {
+      const result = await toggleCategoryPublic(category.id);
+      setPendingPublicToggleId(null);
       if (!result.success) {
         setError(result.error);
         return;
@@ -173,6 +203,7 @@ export function CategoriesManager({ categories }: CategoriesManagerProps) {
                 <TableHead>Descripción</TableHead>
                 <TableHead>Productos</TableHead>
                 <TableHead>Estado</TableHead>
+                <TableHead>Sitio web</TableHead>
                 <TableHead className="text-right">Acciones</TableHead>
               </TableRow>
             </TableHeader>
@@ -221,6 +252,48 @@ export function CategoriesManager({ categories }: CategoriesManagerProps) {
                           <ActiveStatusDot active />
                         ) : (
                           <CircleOff className="size-3.5" />
+                        )}
+                      </button>
+                    </SimpleTooltip>
+                  </TableCell>
+                  <TableCell>
+                    <SimpleTooltip
+                      label={
+                        !category.is_active
+                          ? "Active la categoría para publicarla en el sitio"
+                          : category.is_public
+                            ? "Visible en el catálogo — clic para ocultar"
+                            : "Oculta en el catálogo — clic para publicar"
+                      }
+                    >
+                      <button
+                        type="button"
+                        disabled={
+                          !category.is_active ||
+                          pendingPublicToggleId !== null ||
+                          pendingToggleId !== null
+                        }
+                        onClick={() => handleTogglePublic(category)}
+                        className={cn(
+                          "inline-flex size-8 items-center justify-center rounded-full border transition",
+                          !category.is_active
+                            ? "cursor-not-allowed border-border bg-muted/30 text-muted-foreground/50"
+                            : category.is_public
+                              ? "border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-400"
+                              : "border-border bg-muted/40 text-muted-foreground hover:bg-muted",
+                        )}
+                        aria-label={
+                          category.is_public
+                            ? "Ocultar en el sitio web"
+                            : "Mostrar en el sitio web"
+                        }
+                      >
+                        {pendingPublicToggleId === category.id ? (
+                          <Loader2 className="size-3.5 animate-spin" />
+                        ) : category.is_public ? (
+                          <Globe className="size-3.5" />
+                        ) : (
+                          <EyeOff className="size-3.5" />
                         )}
                       </button>
                     </SimpleTooltip>
@@ -299,18 +372,44 @@ export function CategoriesManager({ categories }: CategoriesManagerProps) {
                   }
                 />
               </div>
-              {isEditing ? (
-                <label className="flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={editor.isActive}
-                    onChange={(event) =>
-                      setEditor({ ...editor, isActive: event.target.checked })
-                    }
-                  />
-                  Categoría activa
-                </label>
-              ) : null}
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={editor.isActive}
+                  onChange={(event) => {
+                    const isActive = event.target.checked;
+                    setEditor({
+                      ...editor,
+                      isActive,
+                      isPublic: isActive ? editor.isPublic : false,
+                    });
+                  }}
+                />
+                Categoría activa
+              </label>
+              <p className="-mt-1 text-xs text-muted-foreground">
+                Se usa en productos y cotizaciones.
+              </p>
+              <label
+                className={cn(
+                  "flex items-center gap-2 text-sm",
+                  !editor.isActive && "text-muted-foreground",
+                )}
+              >
+                <input
+                  type="checkbox"
+                  checked={editor.isPublic}
+                  disabled={!editor.isActive}
+                  onChange={(event) =>
+                    setEditor({ ...editor, isPublic: event.target.checked })
+                  }
+                />
+                Mostrar en el sitio web
+              </label>
+              <p className="-mt-1 text-xs text-muted-foreground">
+                Aparece en filtros del catálogo; sus productos públicos se muestran
+                en la web.
+              </p>
               {error ? <p className="text-sm text-destructive">{error}</p> : null}
             </div>
           ) : null}

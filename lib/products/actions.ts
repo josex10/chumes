@@ -901,13 +901,17 @@ export async function createCategory(
     const supabase = createAdminSupabaseClient();
     const code = await ensureUniqueCategoryCode(parsed.data.name);
 
+    const isActive = parsed.data.is_active ?? true;
+    const isPublic = isActive ? (parsed.data.is_public ?? false) : false;
+
     const { data, error } = await supabase
       .from("product_categories")
       .insert({
         code,
         name: parsed.data.name.trim(),
         description: parsed.data.description?.trim() || null,
-        is_active: parsed.data.is_active ?? true,
+        is_active: isActive,
+        is_public: isPublic,
       })
       .select("*")
       .single();
@@ -950,13 +954,19 @@ export async function updateCategory(
       return { success: false, error: "Categoría no encontrada." };
     }
 
+    const nextIsActive = parsed.data.is_active ?? existing.is_active;
+    const nextIsPublic = nextIsActive
+      ? (parsed.data.is_public ?? existing.is_public)
+      : false;
+
     const supabase = createAdminSupabaseClient();
     const { data, error } = await supabase
       .from("product_categories")
       .update({
         name: parsed.data.name.trim(),
         description: parsed.data.description?.trim() || null,
-        is_active: parsed.data.is_active ?? existing.is_active,
+        is_active: nextIsActive,
+        is_public: nextIsPublic,
       })
       .eq("id", id)
       .select("*")
@@ -984,10 +994,14 @@ export async function toggleCategoryActive(
       return { success: false, error: "Categoría no encontrada." };
     }
 
+    const nextIsActive = !category.is_active;
     const supabase = createAdminSupabaseClient();
     const { data, error } = await supabase
       .from("product_categories")
-      .update({ is_active: !category.is_active })
+      .update({
+        is_active: nextIsActive,
+        ...(nextIsActive ? {} : { is_public: false }),
+      })
       .eq("id", categoryId)
       .select("*")
       .single();
@@ -1002,6 +1016,49 @@ export async function toggleCategoryActive(
   } catch (error) {
     console.error("[toggleCategoryActive]", error);
     return { success: false, error: "No se pudo actualizar el estado de la categoría." };
+  }
+}
+
+export async function toggleCategoryPublic(
+  categoryId: number,
+): Promise<CategoryActionResult> {
+  try {
+    const category = await getProductCategoryById(categoryId);
+    if (!category) {
+      return { success: false, error: "Categoría no encontrada." };
+    }
+
+    if (!category.is_active) {
+      return {
+        success: false,
+        error: "Active la categoría antes de mostrarla en el sitio web.",
+      };
+    }
+
+    const supabase = createAdminSupabaseClient();
+    const { data, error } = await supabase
+      .from("product_categories")
+      .update({ is_public: !category.is_public })
+      .eq("id", categoryId)
+      .select("*")
+      .single();
+
+    if (error || !data) {
+      console.error("[toggleCategoryPublic]", error?.message);
+      return {
+        success: false,
+        error: "No se pudo actualizar la visibilidad en el sitio web.",
+      };
+    }
+
+    revalidateCategoryPaths();
+    return { success: true, category: data };
+  } catch (error) {
+    console.error("[toggleCategoryPublic]", error);
+    return {
+      success: false,
+      error: "No se pudo actualizar la visibilidad en el sitio web.",
+    };
   }
 }
 

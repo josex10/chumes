@@ -215,6 +215,7 @@ export const categoryFormSchema = z.object({
   name: z.string().trim().min(1, "El nombre es obligatorio"),
   description: z.string().trim().optional(),
   is_active: z.boolean().optional(),
+  is_public: z.boolean().optional(),
 });
 
 export type CategoryFormValues = z.infer<typeof categoryFormSchema>;

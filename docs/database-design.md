@@ -56,8 +56,27 @@ Una categoría podrá contener múltiples productos.
 | name        | TEXT        |
 | description | TEXT NULL   |
 | is_active   | BOOLEAN     |
+| is_public   | BOOLEAN     |
 | created_at  | TIMESTAMP   |
 | updated_at  | TIMESTAMP   |
+
+---
+
+### RN-055
+
+`is_active` indica si la categoría puede usarse en operación interna (productos, cotizaciones, logística). Las categorías inactivas no aparecen en selectores del admin que filtran por activas.
+
+---
+
+### RN-056
+
+`is_public` indica si la categoría se muestra en el sitio web (filtros del catálogo). Una categoría inactiva no puede estar publicada en el sitio (`is_public` debe ser falso).
+
+---
+
+### RN-057
+
+En el catálogo público, un producto con `is_public = true` solo es visible si su categoría tiene `is_active = true` e `is_public = true` (regla estricta).
 
 ---
 

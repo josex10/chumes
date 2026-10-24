@@ -73,6 +73,7 @@ export type ProductCategory = {
   name: string;
   description: string | null;
   is_active: boolean;
+  is_public: boolean;
   created_at: string;
   updated_at: string;
 };
@@ -646,6 +647,7 @@ export type Database = {
           name: string;
           description?: string | null;
           is_active?: boolean;
+          is_public?: boolean;
         };
         Update: Partial<
           Database["public"]["Tables"]["product_categories"]["Insert"]
