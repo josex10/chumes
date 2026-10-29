@@ -553,6 +553,81 @@ export type EventOpenResearchItem = {
   created_at: string;
 };
 
+export type ExpenseCategory = {
+  id: number;
+  code: string;
+  name: string;
+  requires_detail: boolean;
+  is_active: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type CompanyPaymentMethod = {
+  id: number;
+  name: string;
+  is_active: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type Expense = {
+  id: string;
+  category_id: number;
+  payment_method_id: number;
+  amount: number;
+  spent_at: string;
+  detail: string | null;
+  created_at: string;
+  updated_at: string;
+  created_by: string | null;
+  updated_by: string | null;
+};
+
+export type ExpenseWithRelations = Expense & {
+  expense_categories: ExpenseCategory;
+  company_payment_methods: CompanyPaymentMethod;
+};
+
+export type InvestmentCreditor = {
+  id: number;
+  name: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type InvestmentStatus = "OPEN" | "SETTLED";
+
+export type Investment = {
+  id: string;
+  creditor_id: number;
+  title: string;
+  amount: number;
+  invested_on: string;
+  status: InvestmentStatus;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+  created_by: string | null;
+  updated_by: string | null;
+};
+
+export type InvestmentPayment = {
+  id: string;
+  investment_id: string;
+  payment_method_id: number;
+  amount: number;
+  paid_at: string;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+  created_by: string | null;
+  updated_by: string | null;
+};
+
 export type Database = {
   public: {
     Tables: {
@@ -1323,6 +1398,119 @@ export type Database = {
             foreignKeyName: "event_research_updates_request_id_fkey";
             columns: ["request_id"];
             referencedRelation: "event_research_requests";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      expense_categories: {
+        Row: ExpenseCategory;
+        Insert: {
+          code: string;
+          name: string;
+          requires_detail?: boolean;
+          is_active?: boolean;
+          sort_order?: number;
+        };
+        Update: Partial<Database["public"]["Tables"]["expense_categories"]["Insert"]>;
+        Relationships: [];
+      };
+      company_payment_methods: {
+        Row: CompanyPaymentMethod;
+        Insert: {
+          name: string;
+          is_active?: boolean;
+          sort_order?: number;
+        };
+        Update: Partial<
+          Database["public"]["Tables"]["company_payment_methods"]["Insert"]
+        >;
+        Relationships: [];
+      };
+      expenses: {
+        Row: Expense;
+        Insert: {
+          category_id: number;
+          payment_method_id: number;
+          amount: number;
+          spent_at?: string;
+          detail?: string | null;
+          created_by?: string | null;
+          updated_by?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["expenses"]["Insert"]>;
+        Relationships: [
+          {
+            foreignKeyName: "expenses_category_id_fkey";
+            columns: ["category_id"];
+            referencedRelation: "expense_categories";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "expenses_payment_method_id_fkey";
+            columns: ["payment_method_id"];
+            referencedRelation: "company_payment_methods";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      investment_creditors: {
+        Row: InvestmentCreditor;
+        Insert: {
+          name: string;
+          is_active?: boolean;
+        };
+        Update: Partial<
+          Database["public"]["Tables"]["investment_creditors"]["Insert"]
+        >;
+        Relationships: [];
+      };
+      investments: {
+        Row: Investment;
+        Insert: {
+          creditor_id: number;
+          title: string;
+          amount: number;
+          invested_on?: string;
+          status?: InvestmentStatus;
+          notes?: string | null;
+          created_by?: string | null;
+          updated_by?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["investments"]["Insert"]>;
+        Relationships: [
+          {
+            foreignKeyName: "investments_creditor_id_fkey";
+            columns: ["creditor_id"];
+            referencedRelation: "investment_creditors";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      investment_payments: {
+        Row: InvestmentPayment;
+        Insert: {
+          investment_id: string;
+          payment_method_id: number;
+          amount: number;
+          paid_at?: string;
+          notes?: string | null;
+          created_by?: string | null;
+          updated_by?: string | null;
+        };
+        Update: Partial<
+          Database["public"]["Tables"]["investment_payments"]["Insert"]
+        >;
+        Relationships: [
+          {
+            foreignKeyName: "investment_payments_investment_id_fkey";
+            columns: ["investment_id"];
+            referencedRelation: "investments";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "investment_payments_payment_method_id_fkey";
+            columns: ["payment_method_id"];
+            referencedRelation: "company_payment_methods";
             referencedColumns: ["id"];
           },
         ];

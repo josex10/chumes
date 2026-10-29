@@ -13,6 +13,7 @@ import {
   Package,
   Truck,
   Users,
+  Wallet,
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -25,6 +26,7 @@ const navItems = [
   { href: "/events", label: "Eventos", icon: CalendarDays },
   { href: "/seguimientos", label: "Seguimientos", icon: MessageCircleMore },
   { href: "/logistica", label: "Logística", icon: Truck },
+  { href: "/gastos", label: "Gastos", icon: Wallet },
   { href: "/customers", label: "Clientes", icon: Users },
   { href: "/products", label: "Productos", icon: Package },
   { href: "/quotes", label: "Cotizaciones", icon: FileText },

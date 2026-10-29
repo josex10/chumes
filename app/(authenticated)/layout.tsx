@@ -1,8 +1,13 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
+import { QuickExpenseProvider } from "@/components/expenses/quick-expense-provider";
 import { QuickEventProvider } from "@/components/events/quick-event-provider";
 import { AppShell } from "@/components/layout/app-shell";
 import { getCustomerTypes } from "@/lib/customers/queries";
+import {
+  getCompanyPaymentMethods,
+  getExpenseCategories,
+} from "@/lib/expenses/queries";
 import { getEventSourcesForSelect } from "@/lib/event-sources/queries";
 import { getFollowUpPendingCount } from "@/lib/follow-ups/queries";
 import { getCurrentProfile } from "@/lib/profiles/get-profile";
@@ -48,21 +53,29 @@ export default async function AuthenticatedLayout({
     redirect("/account-setup");
   }
 
-  const [pendingFollowUps, customerTypes, sources] = await Promise.all([
-    getFollowUpPendingCount(),
-    getCustomerTypes(),
-    getEventSourcesForSelect(),
-  ]);
+  const [pendingFollowUps, customerTypes, sources, expenseCategories, paymentMethods] =
+    await Promise.all([
+      getFollowUpPendingCount(),
+      getCustomerTypes(),
+      getEventSourcesForSelect(),
+      getExpenseCategories(),
+      getCompanyPaymentMethods(),
+    ]);
 
   return (
-    <QuickEventProvider customerTypes={customerTypes} sources={sources}>
-      <AppShell
-        fullName={profile.full_name}
-        email={profile.email}
-        pendingFollowUps={pendingFollowUps}
-      >
-        {children}
-      </AppShell>
-    </QuickEventProvider>
+    <QuickExpenseProvider
+      categories={expenseCategories.filter((category) => category.is_active)}
+      methods={paymentMethods.filter((method) => method.is_active)}
+    >
+      <QuickEventProvider customerTypes={customerTypes} sources={sources}>
+        <AppShell
+          fullName={profile.full_name}
+          email={profile.email}
+          pendingFollowUps={pendingFollowUps}
+        >
+          {children}
+        </AppShell>
+      </QuickEventProvider>
+    </QuickExpenseProvider>
   );
 }
