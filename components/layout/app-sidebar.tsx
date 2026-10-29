@@ -8,6 +8,7 @@ import {
   ChartColumn,
   FileText,
   LayoutDashboard,
+  Presentation,
   MessageCircleMore,
   Package,
   Truck,
@@ -20,6 +21,7 @@ import { Button } from "@/components/ui/button";
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/reportes", label: "Reportes", icon: ChartColumn },
+  { href: "/demo", label: "Demo", icon: Presentation },
   { href: "/events", label: "Eventos", icon: CalendarDays },
   { href: "/seguimientos", label: "Seguimientos", icon: MessageCircleMore },
   { href: "/logistica", label: "Logística", icon: Truck },

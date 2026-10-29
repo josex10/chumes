@@ -17,6 +17,7 @@ export default function robots(): MetadataRoute.Robots {
         "/logistica",
         "/seguimientos",
         "/reportes",
+        "/demo",
         "/intranet",
         "/sign-in",
         "/sign-up",
