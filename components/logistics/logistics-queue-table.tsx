@@ -2,9 +2,10 @@
 
 import { Fragment, useState } from "react";
 import Link from "next/link";
-import { AlertTriangle, ChevronDown } from "lucide-react";
+import { AlertTriangle, Check, ChevronDown } from "lucide-react";
 import { LogisticsEventDetail } from "@/components/logistics/logistics-event-card";
 import { ReadyForInstallBadge } from "@/components/logistics/ready-for-install-badge";
+import { assigneeNames } from "@/lib/logistics/collaborators";
 import { LOGISTICS_TAB } from "@/lib/logistics/constants";
 import { formatLogisticsTime } from "@/lib/logistics/schedule";
 import type { LogisticsQueueItem } from "@/lib/logistics/types";
@@ -55,7 +56,7 @@ export function LogisticsQueueTable({
   const isDelivery = tab === LOGISTICS_TAB.DELIVERY;
   const showLocation = !isWarehouse;
   const colSpan =
-    4 + (isWarehouse ? 2 : 0) + (showLocation ? 1 : 0) + (isDelivery ? 1 : 0);
+    5 + (isWarehouse ? 2 : 0) + (showLocation ? 1 : 0) + (isDelivery ? 1 : 0);
 
   return (
     <Table>
@@ -65,8 +66,9 @@ export function LogisticsQueueTable({
           <TableHead>Hora</TableHead>
           <TableHead>Evento</TableHead>
           <TableHead>Cliente</TableHead>
+          <TableHead>Equipo</TableHead>
           {isWarehouse ? <TableHead>Ítems</TableHead> : null}
-          {isWarehouse ? <TableHead>Alistado</TableHead> : null}
+          {isWarehouse ? <TableHead>Lista</TableHead> : null}
           {showLocation ? <TableHead>Lugar</TableHead> : null}
           {isDelivery ? <TableHead>Cobrar</TableHead> : null}
         </TableRow>
@@ -96,7 +98,15 @@ export function LogisticsQueueTable({
                   />
                 </TableCell>
                 <TableCell className="tabular-nums font-medium">
-                  {timeLabel}
+                  <span className="inline-flex items-center gap-1.5">
+                    {timeLabel}
+                    {item.logistics?.hours_confirmed_at ? (
+                      <Check
+                        className="size-3.5 text-emerald-700 dark:text-emerald-300"
+                        aria-label="Horas confirmadas con el cliente"
+                      />
+                    ) : null}
+                  </span>
                 </TableCell>
                 <TableCell className="max-w-[18rem] font-medium">
                   <div className="flex min-w-0 flex-col items-start gap-1">
@@ -107,11 +117,16 @@ export function LogisticsQueueTable({
                     >
                       {item.event.title}
                     </Link>
-                    {item.readyForInstall ? <ReadyForInstallBadge /> : null}
                   </div>
                 </TableCell>
                 <TableCell className="max-w-[12rem] truncate text-muted-foreground">
                   {item.event.customers.name}
+                </TableCell>
+                <TableCell>
+                  <span className="block max-w-[14rem] truncate text-muted-foreground">
+                    {assigneeNames(item.logistics?.assignee_codes).join(", ") ||
+                      "—"}
+                  </span>
                 </TableCell>
                 {isWarehouse ? (
                   <TableCell>
@@ -125,18 +140,11 @@ export function LogisticsQueueTable({
                 ) : null}
                 {isWarehouse ? (
                   <TableCell>
-                    <span
-                      className={cn(
-                        "tabular-nums",
-                        item.readyForInstall
-                          ? "font-medium text-emerald-700 dark:text-emerald-300"
-                          : "text-muted-foreground",
-                      )}
-                    >
-                      {item.readyForInstall
-                        ? "Lista"
-                        : `${item.prepCompleted}/${item.prepTotal}`}
-                    </span>
+                    {item.readyForInstall ? (
+                      <ReadyForInstallBadge />
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
                   </TableCell>
                 ) : null}
                 {showLocation ? (

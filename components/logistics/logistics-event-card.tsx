@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import {
   ExternalLink,
   MapPin,
@@ -14,13 +13,15 @@ import {
   formatPhoneNumber,
   getCustomerWhatsAppUrl,
 } from "@/lib/customers/phone";
-import type { BankAccount, PaymentMethod } from "@/lib/supabase/types";
+import { PAYMENT_STATUS } from "@/lib/payments/constants";
+import { formatCurrency } from "@/lib/quotes/format";
+import type { BankAccount, PaymentMethod, PaymentSummary } from "@/lib/supabase/types";
 import { ConfirmDeliveryDialog } from "@/components/logistics/confirm-delivery-dialog";
 import { ConfirmPickupDialog } from "@/components/logistics/confirm-pickup-dialog";
-import { DeliveryFinanceBlock } from "@/components/logistics/delivery-finance-block";
+import { DeliveryAssignees } from "@/components/logistics/delivery-assignees";
+import { HoursConfirmedCheck } from "@/components/logistics/hours-confirmed-check";
 import { PackingList } from "@/components/logistics/packing-list";
-import { PrepChecklist } from "@/components/logistics/prep-checklist";
-import { ReadyForInstallBadge } from "@/components/logistics/ready-for-install-badge";
+import { ReadyPackedButton } from "@/components/logistics/ready-packed-button";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -29,6 +30,24 @@ type LogisticsEventDetailProps = {
   paymentMethods: PaymentMethod[];
   bankAccounts: BankAccount[];
 };
+
+function BalanceChip({ summary }: { summary: PaymentSummary | null }) {
+  if (!summary) return null;
+  const isPaid = summary.paymentStatus === PAYMENT_STATUS.PAID;
+
+  return (
+    <span
+      className={cn(
+        "inline-flex h-10 items-center rounded-full border px-3.5 text-sm font-medium",
+        isPaid
+          ? "border-emerald-600/30 bg-emerald-500/10 text-emerald-800 dark:text-emerald-300"
+          : "border-amber-600/30 bg-amber-500/10 text-amber-900 dark:text-amber-200",
+      )}
+    >
+      {isPaid ? "Pagado" : `Cobrar ${formatCurrency(summary.balanceDue)}`}
+    </span>
+  );
+}
 
 export function LogisticsEventDetail({
   item,
@@ -41,6 +60,8 @@ export function LogisticsEventDetail({
   const isWarehouse = tab === LOGISTICS_TAB.WAREHOUSE;
   const isDelivery = tab === LOGISTICS_TAB.DELIVERY;
   const isPickup = tab === LOGISTICS_TAB.PICKUP;
+  const showReady = isWarehouse || isDelivery;
+  const showBalance = isDelivery || (isPickup && (item.paymentSummary?.balanceDue ?? 0) > 0);
   const whatsappUrl = item.phone
     ? getCustomerWhatsAppUrl(
         item.phone,
@@ -51,67 +72,70 @@ export function LogisticsEventDetail({
   return (
     <>
       <div className="flex flex-col gap-4">
-        {item.readyForInstall ? <ReadyForInstallBadge /> : null}
+        <HoursConfirmedCheck
+          eventId={event.id}
+          deliveryDate={event.delivery_date}
+          logistics={item.logistics}
+          leading={
+            showReady ? (
+              <ReadyPackedButton eventId={event.id} logistics={item.logistics} />
+            ) : null
+          }
+          trailing={
+            <>
+              {showBalance ? <BalanceChip summary={item.paymentSummary} /> : null}
+              {item.phone ? (
+                <a
+                  href={`tel:+506${item.phone.replace(/\D/g, "").slice(-8)}`}
+                  aria-label={formatPhoneNumber(item.phone)}
+                  className={cn(
+                    buttonVariants({ variant: "outline", size: "icon" }),
+                    "size-10 rounded-full",
+                  )}
+                >
+                  <Phone className="size-4" />
+                </a>
+              ) : null}
+              {whatsappUrl ? (
+                <a
+                  href={whatsappUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="WhatsApp"
+                  className={cn(
+                    buttonVariants({ variant: "outline", size: "icon" }),
+                    "size-10 rounded-full",
+                  )}
+                >
+                  <MessageCircle className="size-4" />
+                </a>
+              ) : null}
+            </>
+          }
+          aside={<DeliveryAssignees eventId={event.id} logistics={item.logistics} />}
+        />
+
         {item.mapsUrl ? (
           <a
             href={item.mapsUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-start gap-2 text-sm font-medium text-primary hover:underline"
+            className="inline-flex w-fit items-center gap-2 text-sm font-medium text-primary hover:underline"
           >
-            <MapPin className="mt-0.5 size-4 shrink-0" />
+            <MapPin className="size-4 shrink-0" />
             <span>{item.locationLabel ?? "Ver en Google Maps"}</span>
-            <ExternalLink className="mt-0.5 size-3.5 shrink-0 opacity-70" />
+            <ExternalLink className="size-3.5 shrink-0 opacity-70" />
           </a>
         ) : (
-          <p className="inline-flex items-start gap-2 text-sm text-muted-foreground">
-            <MapPin className="mt-0.5 size-4 shrink-0" />
+          <p className="inline-flex items-center gap-2 text-sm text-muted-foreground">
+            <MapPin className="size-4 shrink-0" />
             Sin lugar registrado
           </p>
         )}
 
-        {item.phone ? (
-          <div className="flex flex-wrap gap-2">
-            <a
-              href={`tel:+506${item.phone.replace(/\D/g, "").slice(-8)}`}
-              className={cn(
-                buttonVariants({ variant: "outline", size: "sm" }),
-                "min-h-10",
-              )}
-            >
-              <Phone className="size-3.5" />
-              {formatPhoneNumber(item.phone)}
-            </a>
-            {whatsappUrl ? (
-              <a
-                href={whatsappUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={cn(
-                  buttonVariants({ variant: "outline", size: "sm" }),
-                  "min-h-10",
-                )}
-              >
-                <MessageCircle className="size-3.5" />
-                WhatsApp
-              </a>
-            ) : null}
-          </div>
-        ) : null}
-
-        {isDelivery ? (
-          <DeliveryFinanceBlock summary={item.paymentSummary} />
-        ) : null}
-
-        {isPickup &&
-        item.paymentSummary &&
-        item.paymentSummary.balanceDue > 0 ? (
-          <DeliveryFinanceBlock summary={item.paymentSummary} compact />
-        ) : null}
-
         {item.hasShortage && isWarehouse ? (
-          <p className="rounded-lg bg-amber-500/10 px-3 py-2 text-sm text-amber-800 dark:text-amber-300">
-            Hay ítems con stock insuficiente. Validá inventario antes de empacar.
+          <p className="text-sm text-amber-800 dark:text-amber-300">
+            Hay ítems con stock insuficiente.
           </p>
         ) : null}
 
@@ -121,17 +145,13 @@ export function LogisticsEventDetail({
           showStock={isWarehouse}
         />
 
-        {isWarehouse ? (
-          <PrepChecklist eventId={event.id} logistics={item.logistics} />
-        ) : null}
-
         {isDelivery || isPickup ? (
           <div className="flex justify-end">
             {isDelivery ? (
               <Button
                 type="button"
                 variant="commit"
-                className="min-h-10 w-full sm:w-auto"
+                className="min-h-10 rounded-full px-5"
                 onClick={() => setDeliveryOpen(true)}
               >
                 Confirmar entrega
@@ -141,7 +161,7 @@ export function LogisticsEventDetail({
               <Button
                 type="button"
                 variant="commit"
-                className="min-h-10 w-full sm:w-auto"
+                className="min-h-10 rounded-full px-5"
                 onClick={() => setPickupOpen(true)}
               >
                 Confirmar retiro

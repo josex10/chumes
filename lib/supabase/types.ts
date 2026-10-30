@@ -513,6 +513,8 @@ export type EventLogistics = {
   packed_at: string | null;
   delivered_at: string | null;
   picked_up_at: string | null;
+  hours_confirmed_at: string | null;
+  assignee_codes: string[];
   created_at: string;
   updated_at: string;
 };
@@ -1346,6 +1348,8 @@ export type Database = {
           packed_at?: string | null;
           delivered_at?: string | null;
           picked_up_at?: string | null;
+          hours_confirmed_at?: string | null;
+          assignee_codes?: string[];
         };
         Update: Partial<
           Database["public"]["Tables"]["event_logistics"]["Insert"]

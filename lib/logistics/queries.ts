@@ -115,7 +115,7 @@ function prepCompletedCount(logistics: EventLogistics | null): number {
 }
 
 function isReadyForInstall(logistics: EventLogistics | null): boolean {
-  return prepCompletedCount(logistics) === PREP_STEPS.length;
+  return Boolean(logistics?.packed_at);
 }
 
 async function getLogisticsStatusIds(): Promise<number[]> {

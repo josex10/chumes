@@ -14,7 +14,7 @@ export function ReadyForInstallBadge({ className }: ReadyForInstallBadgeProps) {
       )}
     >
       <Check className="size-3" />
-      Lista para instalar
+      Lista
     </span>
   );
 }

@@ -6,8 +6,15 @@ import { z } from "zod";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import { EVENT_STATUS } from "@/lib/events/constants";
 import { getEventById } from "@/lib/events/queries";
-import { fromDatetimeLocalValue } from "@/lib/events/format-dates";
+import {
+  fromDatetimeLocalValue,
+  toDatetimeLocalValue,
+} from "@/lib/events/format-dates";
 import { canTransitionOperational } from "@/lib/events/operational-transitions";
+import {
+  isDeliveryCollaboratorCode,
+  orderedAssigneeCodes,
+} from "@/lib/logistics/collaborators";
 import {
   isPrepStep,
   PREP_STEP_COLUMNS,
@@ -63,6 +70,8 @@ async function upsertLogisticsField(
     packed_at: string | null;
     delivered_at: string | null;
     picked_up_at: string | null;
+    hours_confirmed_at: string | null;
+    assignee_codes: string[];
   }>,
 ): Promise<ActionResult> {
   const supabase = createAdminSupabaseClient();
@@ -129,6 +138,191 @@ export async function togglePrepStep(
         error instanceof Error
           ? error.message
           : "No se pudo actualizar el alistado.",
+    };
+  }
+}
+
+export async function toggleHoursConfirmed(
+  eventId: string,
+): Promise<ActionResult> {
+  try {
+    const event = await getEventById(eventId);
+    if (!event) {
+      return { success: false, error: "Evento no encontrado." };
+    }
+
+    const supabase = createAdminSupabaseClient();
+    const { data: existing, error: loadError } = await supabase
+      .from("event_logistics")
+      .select("hours_confirmed_at")
+      .eq("event_id", eventId)
+      .maybeSingle();
+
+    if (loadError) {
+      console.error("[toggleHoursConfirmed]", loadError.message);
+      return { success: false, error: "No se pudo cargar la confirmación de horas." };
+    }
+
+    const nextValue = existing?.hours_confirmed_at
+      ? null
+      : new Date().toISOString();
+    const result = await upsertLogisticsField(eventId, {
+      hours_confirmed_at: nextValue,
+    });
+    if (!result.success) return result;
+
+    revalidateLogisticsPaths(eventId);
+    return { success: true };
+  } catch (error) {
+    console.error("[toggleHoursConfirmed]", error);
+    return {
+      success: false,
+      error:
+        error instanceof Error
+          ? error.message
+          : "No se pudo actualizar la confirmación de horas.",
+    };
+  }
+}
+
+export async function toggleReadyPacked(
+  eventId: string,
+): Promise<ActionResult> {
+  try {
+    const event = await getEventById(eventId);
+    if (!event) {
+      return { success: false, error: "Evento no encontrado." };
+    }
+
+    const supabase = createAdminSupabaseClient();
+    const { data: existing, error: loadError } = await supabase
+      .from("event_logistics")
+      .select("packed_at")
+      .eq("event_id", eventId)
+      .maybeSingle();
+
+    if (loadError) {
+      console.error("[toggleReadyPacked]", loadError.message);
+      return { success: false, error: "No se pudo cargar el alistado." };
+    }
+
+    const result = await upsertLogisticsField(eventId, {
+      packed_at: existing?.packed_at ? null : new Date().toISOString(),
+    });
+    if (!result.success) return result;
+
+    revalidateLogisticsPaths(eventId);
+    return { success: true };
+  } catch (error) {
+    console.error("[toggleReadyPacked]", error);
+    return {
+      success: false,
+      error:
+        error instanceof Error
+          ? error.message
+          : "No se pudo actualizar el alistado.",
+    };
+  }
+}
+
+export async function updateDeliveryTime(
+  eventId: string,
+  deliveryDateLocal: string,
+): Promise<ActionResult> {
+  const deliveryDate = fromDatetimeLocalValue(deliveryDateLocal);
+  if (!deliveryDate) {
+    return { success: false, error: "La fecha y hora de entrega no son válidas." };
+  }
+
+  try {
+    const { userId } = await auth();
+    const event = await getEventById(eventId);
+    if (!event) {
+      return { success: false, error: "Evento no encontrado." };
+    }
+
+    if (toDatetimeLocalValue(event.delivery_date) === deliveryDateLocal.trim()) {
+      return { success: true };
+    }
+
+    const supabase = createAdminSupabaseClient();
+    const { error } = await supabase
+      .from("events")
+      .update({
+        delivery_date: deliveryDate,
+        updated_by: userId,
+      })
+      .eq("id", eventId);
+
+    if (error) {
+      console.error("[updateDeliveryTime]", error.message);
+      return { success: false, error: "No se pudo actualizar la fecha de entrega." };
+    }
+
+    const { data: existing, error: loadError } = await supabase
+      .from("event_logistics")
+      .select("hours_confirmed_at")
+      .eq("event_id", eventId)
+      .maybeSingle();
+
+    if (loadError) {
+      console.error("[updateDeliveryTime]", loadError.message);
+      return {
+        success: false,
+        error: "La fecha se guardó, pero no se pudo actualizar la confirmación.",
+      };
+    }
+
+    if (existing?.hours_confirmed_at) {
+      const cleared = await upsertLogisticsField(eventId, {
+        hours_confirmed_at: null,
+      });
+      if (!cleared.success) return cleared;
+    }
+
+    revalidateLogisticsPaths(eventId);
+    return { success: true };
+  } catch (error) {
+    console.error("[updateDeliveryTime]", error);
+    return {
+      success: false,
+      error:
+        error instanceof Error
+          ? error.message
+          : "No se pudo actualizar la fecha de entrega.",
+    };
+  }
+}
+
+export async function setDeliveryAssignees(
+  eventId: string,
+  codes: string[],
+): Promise<ActionResult> {
+  if (codes.some((code) => !isDeliveryCollaboratorCode(code))) {
+    return { success: false, error: "Hay un colaborador inválido." };
+  }
+
+  try {
+    const event = await getEventById(eventId);
+    if (!event) {
+      return { success: false, error: "Evento no encontrado." };
+    }
+
+    const result = await upsertLogisticsField(eventId, {
+      assignee_codes: orderedAssigneeCodes(codes),
+    });
+    if (!result.success) return result;
+
+    revalidateLogisticsPaths(eventId);
+    return { success: true };
+  } catch (error) {
+    console.error("[setDeliveryAssignees]", error);
+    return {
+      success: false,
+      error:
+        error instanceof Error
+          ? error.message
+          : "No se pudo asignar el equipo.",
     };
   }
 }
