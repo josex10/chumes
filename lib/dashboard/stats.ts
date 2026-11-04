@@ -1,4 +1,4 @@
-import { EVENT_PHASE } from "@/lib/events/constants";
+import { EVENT_PHASE, EVENT_STATUS } from "@/lib/events/constants";
 import {
   addCalendarDays,
   COSTA_RICA_OFFSET,
@@ -288,12 +288,17 @@ export function getReservationsWeekStats(
 export function getFinanceWeekStats(
   events: EventWithRelations[],
   reference = new Date(),
+  options: { includeWonArchived?: boolean } = {},
 ): FinanceWeekStats {
   const { start, end } = getWeekBounds(reference);
 
   const confirmedEvents = events.filter((event) => {
     if (!event.event_date) return false;
-    if (event.event_statuses?.phase !== EVENT_PHASE.OPERATIONAL) return false;
+    const status = event.event_statuses;
+    const isOperational = status?.phase === EVENT_PHASE.OPERATIONAL;
+    const isWonArchived =
+      options.includeWonArchived && status?.code === EVENT_STATUS.WON_ARCHIVED;
+    if (!isOperational && !isWonArchived) return false;
     return isDateWithinRange(event.event_date, start, end);
   });
 

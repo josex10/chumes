@@ -158,20 +158,26 @@ export async function getEventsReservedBetween(
 export async function getEventsByEventDateBetween(
   start: Date,
   end: Date,
+  options: { includeWonArchived?: boolean } = {},
 ): Promise<EventWithRelations[]> {
   const supabase = createAdminSupabaseClient();
   const startKey = toCostaRicaDateKey(start);
   const endKey = toCostaRicaDateKey(end);
 
-  const { data: operationalStatuses } = await supabase
+  const statusQuery = supabase
     .from("event_statuses")
     .select("id")
-    .eq("phase", "OPERATIONAL")
     .eq("is_active", true);
 
-  if (!operationalStatuses?.length) return [];
+  const { data: statuses } = options.includeWonArchived
+    ? await statusQuery.or(
+        `phase.eq.${EVENT_PHASE.OPERATIONAL},code.eq.${EVENT_STATUS.WON_ARCHIVED}`,
+      )
+    : await statusQuery.eq("phase", EVENT_PHASE.OPERATIONAL);
 
-  const statusIds = operationalStatuses.map((s) => s.id);
+  if (!statuses?.length) return [];
+
+  const statusIds = statuses.map((status) => status.id);
   const { data, error } = await supabase
     .from("events")
     .select(EVENT_SELECT)

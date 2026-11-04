@@ -4,12 +4,13 @@ import { WeekPicker } from "@/components/dashboard/week-picker";
 import { getWeekKey } from "@/lib/dashboard/stats";
 import { cn } from "@/lib/utils";
 
-export type DashboardTab = "main" | "cotizaciones" | "finanzas";
+export type DashboardTab = "main" | "cotizaciones" | "finanzas" | "resumen";
 
 const TABS: { id: DashboardTab; label: string }[] = [
   { id: "main", label: "Main" },
   { id: "cotizaciones", label: "Cotizaciones" },
   { id: "finanzas", label: "Finanzas" },
+  { id: "resumen", label: "Resumen" },
 ];
 
 type DashboardHeaderProps = {

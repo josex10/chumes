@@ -5,6 +5,7 @@ import {
 } from "@/components/dashboard/dashboard-header";
 import { FinanzasTab } from "@/components/dashboard/finanzas-tab";
 import { MainTab } from "@/components/dashboard/main-tab";
+import { ResumenTab } from "@/components/dashboard/resumen-tab";
 import {
   getCustomersCount,
   getCustomersCreatedBetween,
@@ -19,6 +20,8 @@ import {
   getWeekKey,
   parseWeekKey,
 } from "@/lib/dashboard/stats";
+import { buildWeekReport } from "@/lib/dashboard/week-report";
+import { getExpensesBetween } from "@/lib/expenses/queries";
 import { getActiveEventSources } from "@/lib/event-sources/queries";
 import {
   getEventsByEventDateBetween,
@@ -34,7 +37,7 @@ type DashboardPageProps = {
 };
 
 function parseTab(tab?: string): DashboardTab {
-  if (tab === "cotizaciones" || tab === "finanzas") return tab;
+  if (tab === "cotizaciones" || tab === "finanzas" || tab === "resumen") return tab;
   return "main";
 }
 
@@ -46,10 +49,14 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   const weekKey = getWeekKey(reference);
   const weekRange = formatWeekRange(start, end);
 
+  const needsFinanceEvents = activeTab === "finanzas" || activeTab === "resumen";
+  const needsExpenses = activeTab === "resumen";
+
   const [
     leadsEvents,
     reservedEvents,
     financeEvents,
+    expenses,
     quotes,
     totalCustomers,
     customersThisWeek,
@@ -57,7 +64,12 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   ] = await Promise.all([
     getEventsCreatedBetween(start, end),
     getEventsReservedBetween(start, end),
-    getEventsByEventDateBetween(start, end),
+    needsFinanceEvents
+      ? getEventsByEventDateBetween(start, end, {
+          includeWonArchived: activeTab === "resumen",
+        })
+      : Promise.resolve([]),
+    needsExpenses ? getExpensesBetween(start, end) : Promise.resolve([]),
     getQuotesCreatedBetween(start, end),
     getCustomersCount(),
     getCustomersCreatedBetween(start, end),
@@ -92,6 +104,12 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
       )}
 
       {activeTab === "finanzas" && <FinanzasTab stats={financeStats} />}
+
+      {activeTab === "resumen" && (
+        <ResumenTab
+          report={buildWeekReport({ reference, events: financeEvents, expenses })}
+        />
+      )}
     </main>
   );
 }
