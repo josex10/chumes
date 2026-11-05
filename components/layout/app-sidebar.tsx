@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   CalendarDays,
+  CalendarRange,
   ChartColumn,
   FileText,
   LayoutDashboard,
@@ -24,6 +25,7 @@ const navItems = [
   { href: "/reportes", label: "Reportes", icon: ChartColumn },
   { href: "/demo", label: "Demo", icon: Presentation },
   { href: "/events", label: "Eventos", icon: CalendarDays },
+  { href: "/planificador", label: "Planificador", icon: CalendarRange },
   { href: "/seguimientos", label: "Seguimientos", icon: MessageCircleMore },
   { href: "/logistica", label: "Logística", icon: Truck },
   { href: "/gastos", label: "Gastos", icon: Wallet },
