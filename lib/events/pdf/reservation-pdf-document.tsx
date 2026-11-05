@@ -7,6 +7,7 @@ import {
   View,
 } from "@react-pdf/renderer";
 import type { EventReservationPdfData } from "@/lib/events/pdf/types";
+import type { EventFinancialMovementWithRelations } from "@/lib/supabase/types";
 import {
   FINANCIAL_MOVEMENT_TYPE,
   PAYMENT_STATUS_LABELS,
@@ -21,6 +22,7 @@ import {
   formatPdfDate,
   formatPdfDateTime,
   formatPdfEventDate,
+  formatPdfScheduleDateTime,
 } from "@/lib/quotes/pdf/format-pdf";
 
 const styles = StyleSheet.create({
@@ -173,11 +175,24 @@ const styles = StyleSheet.create({
   },
   movementRow: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 3,
+    alignItems: "flex-start",
+    marginBottom: 4,
     paddingLeft: 8,
+  },
+  movementDetail: {
+    flex: 1,
+    paddingRight: 8,
+  },
+  movementDetailText: {
+    fontSize: 8,
+    lineHeight: 1.35,
+    color: "#6b7280",
+  },
+  movementAmount: {
+    width: 78,
     fontSize: 8,
     color: "#6b7280",
+    textAlign: "right",
   },
   summaryTotal: {
     flexDirection: "row",
@@ -226,6 +241,27 @@ function InfoRow({ label, value }: { label: string; value: string }) {
     <View style={styles.infoRow}>
       <Text style={styles.infoLabel}>{label}</Text>
       <Text style={styles.infoValue}>{value}</Text>
+    </View>
+  );
+}
+
+function MovementLine({
+  movement,
+}: {
+  movement: EventFinancialMovementWithRelations;
+}) {
+  return (
+    <View style={styles.movementRow}>
+      <View style={styles.movementDetail}>
+        <Text style={styles.movementDetailText}>
+          {formatPdfDateTime(movement.movement_date)}
+          {"\n· "}
+          {movement.payment_methods.name}
+        </Text>
+      </View>
+      <Text style={styles.movementAmount}>
+        {formatPdfCurrency(Number(movement.amount))}
+      </Text>
     </View>
   );
 }
@@ -298,11 +334,11 @@ export function ReservationPdfDocument({ data }: ReservationPdfDocumentProps) {
             />
             <InfoRow
               label="Entrega"
-              value={formatPdfDateTime(event.delivery_date)}
+              value={formatPdfScheduleDateTime(event.delivery_date)}
             />
             <InfoRow
               label="Recogida"
-              value={formatPdfDateTime(event.pickup_date)}
+              value={formatPdfScheduleDateTime(event.pickup_date)}
             />
             {event.estimated_location ? (
               <InfoRow label="Ubicación" value={event.estimated_location} />
@@ -366,16 +402,7 @@ export function ReservationPdfDocument({ data }: ReservationPdfDocumentProps) {
           </View>
 
           {advanceMovements.map((movement) => (
-            <View key={movement.id} style={styles.movementRow}>
-              <Text>
-                {formatPdfDateTime(movement.movement_date)} ·{" "}
-                {movement.payment_methods.name}
-                {movement.bank_accounts
-                  ? ` · ${movement.bank_accounts.name}`
-                  : ""}
-              </Text>
-              <Text>{formatPdfCurrency(Number(movement.amount))}</Text>
-            </View>
+            <MovementLine key={movement.id} movement={movement} />
           ))}
 
           {paymentSummary.totalRefunds > 0 ? (
@@ -385,16 +412,7 @@ export function ReservationPdfDocument({ data }: ReservationPdfDocumentProps) {
                 <Text>{formatPdfCurrency(paymentSummary.totalRefunds)}</Text>
               </View>
               {refundMovements.map((movement) => (
-                <View key={movement.id} style={styles.movementRow}>
-                  <Text>
-                    {formatPdfDateTime(movement.movement_date)} ·{" "}
-                    {movement.payment_methods.name}
-                    {movement.bank_accounts
-                      ? ` · ${movement.bank_accounts.name}`
-                      : ""}
-                  </Text>
-                  <Text>{formatPdfCurrency(Number(movement.amount))}</Text>
-                </View>
+                <MovementLine key={movement.id} movement={movement} />
               ))}
             </>
           ) : null}
